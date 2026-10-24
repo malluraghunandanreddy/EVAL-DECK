@@ -1,5 +1,9 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TriLens Beta</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Free compliance audit for AI apps. Compare your privacy policy with what your code, AI agents and database actually do, mapped to India's DPDP Act and the EU GDPR.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -379,7 +383,8 @@ h1{font-size:var(--step-h1);font-stretch:116%;font-weight:800;letter-spacing:-.0
 .booth-sub{color:var(--ink-2);font-size:clamp(.95rem,1.6vw,1.15rem)}
 .booth-close{position:absolute;top:max(16px,env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px))}
 </style>
-<!-- /head -->
+</head>
+<body>
 
 <header class="top">
   <div class="wrap top-in">
@@ -840,7 +845,7 @@ h1{font-size:var(--step-h1);font-stretch:116%;font-weight:800;letter-spacing:-.0
 ------------------------------------------------------------------- */
 const CONFIG = {
   name: "TriLens",
-  appUrl: "https://example.com/trilens/start",
+  appUrl: "/api/auth/github",
   feedbackUrl: "https://example.com/trilens/feedback",
   contactEmail: "team@example.com",
   campaign: "hackathon",
@@ -1031,3 +1036,5 @@ if (!CONFIG.prices[currency]) currency = "INR";
 setCurrency(currency);
 $$(".cur button").forEach(b => b.addEventListener("click", () => setCurrency(b.dataset.cur)));
 </script>
+</body>
+</html>
