@@ -52,6 +52,8 @@ export const scans = pgTable("scans", {
   checklist: jsonb("checklist"),
   coverage: jsonb("coverage"),
   error: text("error"),
+  // Set when this one report was bought (single report plan). Pro monthly unlocks every report instead.
+  unlockedAt: timestamp("unlocked_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   finishedAt: timestamp("finished_at", { withTimezone: true }),
 });

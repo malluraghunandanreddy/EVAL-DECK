@@ -4,6 +4,7 @@ import { db, schema } from "@/lib/db";
 import { getUser } from "@/lib/session";
 import { headline, stripFixes } from "@/lib/checklist";
 import { onReportPoll } from "@/lib/agent/poll";
+import { planFor, scanUnlocked } from "@/lib/entitlements";
 import type { ChecklistItem, Framework, Gap } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -35,7 +36,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const gaps = (Array.isArray(scan.gaps) ? scan.gaps : []) as Gap[];
   const checklist = (Array.isArray(scan.checklist) ? scan.checklist : []) as ChecklistItem[];
   const cov = (scan.coverage ?? null) as { code?: boolean; schemaFiles?: boolean; liveDb?: boolean } | null;
-  const isPro = user.isPro;
+  const isPro = scanUnlocked(user, scan);
+  const plan = planFor(user, scan);
 
   // Latest policy draft for this project, so the report shows review status while it polls
   const [pv] = await db
@@ -54,6 +56,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     createdAt: scan.createdAt,
     finishedAt: scan.finishedAt,
     isPro,
+    plan,
     project: {
       id: project.id,
       name: project.name,

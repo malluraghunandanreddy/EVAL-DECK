@@ -3,6 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { hmacHex, safeEqual } from "@/lib/crypto";
 import { queueRescan, runAfterResponse, runScanAndReview } from "@/lib/agent/rescan";
+import { isMonthly } from "@/lib/entitlements";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -41,6 +42,9 @@ export async function POST(req: Request) {
   for (const project of projects) {
     const branch = project.defaultBranch || payload.repository?.default_branch || "main";
     if (payload.ref !== `refs/heads/${branch}`) continue;
+    // Re-check on every push is a Pro monthly feature.
+    const [owner] = await db.select({ isPro: schema.users.isPro, proUntil: schema.users.proUntil }).from(schema.users).where(eq(schema.users.id, project.userId)).limit(1);
+    if (!owner || !isMonthly(owner)) continue;
     const scanId = await queueRescan(project, sha, "webhook");
     if (scanId) queued.push(scanId);
   }

@@ -3,6 +3,14 @@
 Tenant: `https://agenticorg.hackathon.pinelabs.com` (set `AGENTICORG_BASE_URL`; the SDK otherwise defaults to `app.agenticorg.ai`).
 All runs go through `agenticorg-sdk@0.4.0` by agent **UUID** (`POST /api/v1/agents/{id}/run`). Running by agent type needs `companyId` + `a2a:write`, which default keys lack.
 
+> **Hackathon tenant notes (2026-10-24).** The key issued by Airtribe is run/create-only: `agents.run`, `POST /agents`,
+> `POST /workflows`, `workflows.run` work; every GET (`agents.list`, `workflows.getRun`, approvals) returns 401.
+> `POST /agents` also rejects bodies over ~500 chars with 401, so both agents carry a short system prompt
+> ("follow `inputs.instructions`, reply with ONLY the JSON described") and the full per-action contract is sent on each
+> run from `lib/agent/instructions.ts`. Run statuses seen: `completed`, `failed`, `hitl_triggered` (confidence below the
+> 0.88 floor; output is still returned and an approval item is filed on AgenticOrg), `budget_exceeded`.
+> Agents and the workflow were created by API (`scripts/agent-smoke.ts` verifies them); IDs live in Vercel env vars.
+
 ## 1. Create the Policy Reader agent
 
 Agents -> Create (or Create from SOP). Name: **PolicyDrift Policy Reader**. No tools, no approval gate (it changes nothing).

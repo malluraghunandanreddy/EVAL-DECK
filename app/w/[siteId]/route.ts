@@ -3,6 +3,7 @@ import { db, logEvent, schema } from "@/lib/db";
 import { UUID_RE } from "@/lib/agent/access";
 import { latestApproved } from "@/lib/agent/review";
 import { computeInventory, labelFor, projectFrameworks, scanParts } from "@/lib/policy/inventory";
+import { proForAll } from "@/lib/plans";
 
 export const dynamic = "force-dynamic";
 
@@ -117,7 +118,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ siteId: string 
     frameworks,
     lastVerified: version?.approvedAt ? version.approvedAt.toISOString().slice(0, 10) : null,
     outOfDate: row.site.outOfDate,
-    pro: !!row.isPro,
+    pro: !!row.isPro || proForAll(),
     policyUrl: `${base}/p/${siteId}`,
     termsUrl: `${base}/t/${siteId}`,
     homeUrl: base,

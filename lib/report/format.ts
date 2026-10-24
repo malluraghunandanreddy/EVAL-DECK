@@ -26,6 +26,7 @@ export type ScanResponse = {
     repoFullName: string | null;
   } | null;
   isPro: boolean;
+  plan?: "free" | "single" | "monthly";
   policyClaims: PolicyClaims | null;
   codeFindings: CodeFinding[] | null;
   schemaFindings: SchemaFinding[] | null;

@@ -1,3 +1,4 @@
+import { isMonthly } from "../entitlements";
 import { and, eq, inArray, isNotNull, lt, or, isNull, sql } from "drizzle-orm";
 import { db, logEvent, schema } from "../db";
 import type { Scan, User } from "../db/schema";
@@ -14,7 +15,7 @@ type RunVerdict = { state: "pending" | "approved" | "rejected" | "failed"; note:
 
 const PENDING = /^(queued|pending|running|in_progress|started|waiting.*|awaiting.*|paused|hitl.*|needs?_approval|pending_approval|blocked)$/;
 const DONE = /^(completed?|succeeded|success|successful|approved|done|finished)$/;
-const FAILED = /^(failed|failure|error|errored|cancell?ed|timed_out|timeout|aborted)$/;
+const FAILED = /^(failed|failure|error|errored|cancell?ed|timed_out|timeout|aborted|budget_exceeded)$/;
 
 function findString(o: unknown, keys: string[], depth = 0): string | null {
   if (!o || typeof o !== "object" || depth > 5) return null;
@@ -88,7 +89,13 @@ async function checkPendingRuns(user: User): Promise<void> {
     try {
       raw = await withTimeout(client.workflows.getRun(v.agentRunId), 8_000);
     } catch (err) {
-      console.error("getRun failed", v.agentRunId, (err as Error).message);
+      const msg = (err as Error).message;
+      console.error("getRun failed", v.agentRunId, msg);
+      if (/\b401\b|unauthori[sz]ed|authorization header/i.test(msg)) {
+        // Key cannot read workflow runs (hackathon keys are run-only). Stop polling; approve at /admin/approvals.
+        await db.update(schema.policyVersions).set({ agentMode: "agent" }).where(eq(schema.policyVersions.id, v.id));
+        await logEvent("agent_action", user.id, { action: "poll_not_permitted", runId: v.agentRunId, policyVersionId: v.id, error: msg.slice(0, 200) });
+      }
     }
     if (!raw) continue;
     const verdict = interpretWorkflowRun(raw);
@@ -105,6 +112,7 @@ async function checkPendingRuns(user: User): Promise<void> {
 }
 
 async function checkRepoChange(scan: Scan, user: User): Promise<void> {
+  if (!isMonthly(user)) return; // the agent re-check on every push is a Pro monthly feature
   const cutoff = new Date(Date.now() - WATCH_POLL_MS);
   const [project] = await db
     .update(schema.projects)

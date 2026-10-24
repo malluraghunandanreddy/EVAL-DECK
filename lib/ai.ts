@@ -1,4 +1,5 @@
 import { AgenticOrg } from "agenticorg-sdk";
+import { withInstructions } from "./agent/instructions";
 
 // Every AI step goes through AgenticOrg agents (no Claude API key today).
 // Callers must always have a deterministic fallback: these helpers return null on any failure or timeout.
@@ -39,7 +40,7 @@ export async function runAgent(
   if (!c || !agentId) return null;
   try {
     const res = await withTimeout(
-      (c as unknown as { agents: { run: (id: string, body: unknown) => Promise<AgentRun> } }).agents.run(agentId, { action, inputs }),
+      (c as unknown as { agents: { run: (id: string, body: unknown) => Promise<AgentRun> } }).agents.run(agentId, { action, inputs: withInstructions(action, inputs) }),
       timeoutMs,
     );
     return res;

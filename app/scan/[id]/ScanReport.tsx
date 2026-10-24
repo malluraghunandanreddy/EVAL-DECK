@@ -20,6 +20,7 @@ import {
 import { Markdown } from "./Markdown";
 
 const POLL_MS = 3000;
+const payHref = (scanId: string, plan: "single" | "monthly" = "single") => `/pay?plan=${plan}&scan=${scanId}`;
 const PROGRESS_STEPS = [
   "Reading your code…",
   "Checking policy…",
@@ -138,9 +139,12 @@ export default function ScanReport({ scanId }: { scanId: string }) {
         <aside className="rp-free-banner">
           <div>
             <h2>This is your free report</h2>
-            <p>You can see every gap and the proof behind it. The fix for each gap and the full privacy policy are in the paid plans: ₹50 for this report, or Pro monthly for all of them.</p>
+            <p>You can see every gap and the proof behind it. The fix for each gap, the full privacy policy and the database check are ₹50 for this report, or Pro monthly for every report plus publishing and re-checks on each push.</p>
           </div>
-          <a className="btn" href="/pricing">See paid plans</a>
+          <div className="rp-actions">
+            <a className="btn" href={payHref(scan.id)}>Unlock this report ₹50</a>
+            <a className="btn secondary" href={`/pricing?scan=${scan.id}`}>Compare plans</a>
+          </div>
         </aside>
       )}
       <Checklist scan={scan} />
@@ -170,13 +174,13 @@ function Header({ scan, onShare }: { scan: ScanResponse; onShare: (() => void) |
           {p?.repoFullName && <span className="rp-pill">⎇ {p.repoFullName}</span>}
           {fw.map((f) => <span key={f} className="rp-pill">{FRAMEWORK_LABEL[f]}</span>)}
           {scan.finishedAt && <span className="rp-pill">Scanned {new Date(scan.finishedAt).toLocaleString()}</span>}
-          {scan.isPro ? <span className="rp-pill pro">Pro</span> : <span className="rp-pill">Free report</span>}
+          {scan.plan === "monthly" ? <span className="rp-pill pro">Pro</span> : scan.isPro ? <span className="rp-pill pro">Unlocked</span> : <span className="rp-pill">Free report</span>}
         </div>
       </div>
       {onShare && (
         <div className="rp-actions">
           <button className="btn secondary sm" onClick={onShare}>Share report</button>
-          {!scan.isPro && <a className="btn sm" href="/pricing">Unlock fixes</a>}
+          {!scan.isPro && <a className="btn sm" href={payHref(scan.id)}>Unlock fixes</a>}
         </div>
       )}
     </div>
@@ -266,14 +270,14 @@ function Checklist({ scan }: { scan: ScanResponse }) {
       )}
       <ul className="rp-list">
         {mine.map((item) => (
-          <ChecklistRow key={item.id} item={item} gapsById={gapsById} isPro={scan.isPro} />
+          <ChecklistRow key={item.id} item={item} gapsById={gapsById} isPro={scan.isPro} scanId={scan.id} />
         ))}
       </ul>
     </section>
   );
 }
 
-function ChecklistRow({ item, gapsById, isPro }: { item: ChecklistItem; gapsById: Map<string, Gap>; isPro: boolean }) {
+function ChecklistRow({ item, gapsById, isPro, scanId }: { item: ChecklistItem; gapsById: Map<string, Gap>; isPro: boolean; scanId: string }) {
   const [open, setOpen] = useState(false);
   const meta = STATUS_META[item.status];
   const linked = arr(item.gapIds).map((id) => gapsById.get(id)).filter((g): g is Gap => !!g);
@@ -305,7 +309,7 @@ function ChecklistRow({ item, gapsById, isPro }: { item: ChecklistItem; gapsById
                 {open && <div className="rp-fix">{item.fix}</div>}
               </>
             ) : !isPro ? (
-              <LockedFix />
+              <LockedFix scanId={scanId} />
             ) : null)}
         </div>
       </div>
@@ -313,9 +317,9 @@ function ChecklistRow({ item, gapsById, isPro }: { item: ChecklistItem; gapsById
   );
 }
 
-function LockedFix() {
+function LockedFix({ scanId }: { scanId: string }) {
   return (
-    <a className="rp-lock" href="/pricing">
+    <a className="rp-lock" href={payHref(scanId)}>
       <span>How to fix: paid plans</span>
       <span>Unlock →</span>
     </a>
@@ -450,7 +454,7 @@ function Gaps({ scan }: { scan: ScanResponse }) {
         return (
           <div key={sev} className="rp-sev-group">
             <h3><span className={`rp-chip ${sev}`}>{SEVERITY_LABEL[sev]}</span> {group.length} {group.length === 1 ? "gap" : "gaps"}</h3>
-            {group.map((g) => <GapCard key={g.id} gap={g} isPro={scan.isPro} />)}
+            {group.map((g) => <GapCard key={g.id} gap={g} isPro={scan.isPro} scanId={scan.id} />)}
           </div>
         );
       })}
@@ -458,7 +462,7 @@ function Gaps({ scan }: { scan: ScanResponse }) {
   );
 }
 
-function GapCard({ gap, isPro }: { gap: Gap; isPro: boolean }) {
+function GapCard({ gap, isPro, scanId }: { gap: Gap; isPro: boolean; scanId: string }) {
   const [open, setOpen] = useState(false);
   return (
     <article id={`gap-${gap.id}`} className="rp-gap">
@@ -492,7 +496,7 @@ function GapCard({ gap, isPro }: { gap: Gap; isPro: boolean }) {
           {open && <div className="rp-fix">{gap.fix}</div>}
         </>
       ) : !isPro ? (
-        <LockedFix />
+        <LockedFix scanId={scanId} />
       ) : null}
     </article>
   );
@@ -537,7 +541,7 @@ function PolicyPanel({ scan, reload, toast }: { scan: ScanResponse; reload: () =
     setPublishing(true);
     try {
       const r = await fetch(`/api/scans/${scan.id}/fix`, { method: "POST" });
-      if (r.status === 402 || r.status === 403) { window.location.href = "/pricing"; return; }
+      if (r.status === 402 || r.status === 403) { window.location.href = payHref(scan.id, "monthly"); return; }
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       toast("Sent for human review");
       await reload();
@@ -583,11 +587,19 @@ function PolicyPanel({ scan, reload, toast }: { scan: ScanResponse; reload: () =
             <div className="rp-unlock">
               <strong>{hiddenCount} more {hiddenCount === 1 ? "section" : "sections"}</strong>
               <span className="muted" style={{ fontSize: 13 }}>Full policy and terms, copy, download and one-click publish.</span>
-              <a className="btn" href="/pricing">Unlock the full policy</a>
+              <a className="btn" href={payHref(scan.id)}>Unlock the full policy</a>
             </div>
           </div>
         )}
-        {scan.isPro && <PublishBox scan={scan} publishing={publishing} onPublish={publish} toast={toast} />}
+        {scan.isPro && scan.plan === "monthly" && <PublishBox scan={scan} publishing={publishing} onPublish={publish} toast={toast} />}
+        {scan.isPro && scan.plan !== "monthly" && (
+          <div className="rp-publish">
+            <div className="row" style={{ justifyContent: "space-between" }}>
+              <span style={{ fontSize: 14 }}>Publish a hosted policy page with an embeddable widget, reviewed by a human, and get an agent re-check on every push with Pro monthly.</span>
+              <a className="btn sm" href={payHref(scan.id, "monthly")}>Go monthly</a>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );
@@ -598,19 +610,36 @@ function PublishBox({ scan, publishing, onPublish, toast }: { scan: ScanResponse
   const [origin, setOrigin] = useState("");
   useEffect(() => setOrigin(window.location.origin), []);
 
+  const links = (siteId: string) => {
+    const policyUrl = `${origin}/p/${siteId}`;
+    const termsUrl = `${origin}/t/${siteId}`;
+    const widget = `<script src="${origin}/w/${siteId}.js" async></script>`;
+    const iframe = `<iframe src="${policyUrl}" title="Privacy policy" style="width:100%;height:80vh;border:0"></iframe>`;
+    const copy = (text: string, what: string) => async () => toast((await copyText(text)) ? `${what} copied` : "Could not copy");
+    return (
+      <>
+        <p style={{ fontSize: 14, margin: "10px 0 4px" }}>Your hosted privacy policy link. Link to it from your app or footer:</p>
+        <pre className="rp-code">{policyUrl}</pre>
+        <div className="rp-actions" style={{ marginTop: 6 }}>
+          <button className="btn sm" onClick={copy(policyUrl, "Link")}>Copy link</button>
+          <button className="btn secondary sm" onClick={copy(iframe, "Embed code")}>Copy iframe embed</button>
+          <a className="btn secondary sm" href={policyUrl} target="_blank" rel="noreferrer">Privacy page ↗</a>
+          <a className="btn secondary sm" href={termsUrl} target="_blank" rel="noreferrer">Terms page ↗</a>
+        </div>
+        <p style={{ fontSize: 14, margin: "12px 0 4px" }}>Or add the widget, which shows the verified data inventory and links to both pages:</p>
+        <pre className="rp-code">{widget}</pre>
+        <div className="rp-actions" style={{ marginTop: 6 }}>
+          <button className="btn sm" onClick={copy(widget, "Snippet")}>Copy snippet</button>
+        </div>
+      </>
+    );
+  };
   if (pv?.status === "approved" && pv.siteId) {
-    const snippet = `<script src="${origin}/w/${pv.siteId}.js" async></script>`;
     return (
       <div className="rp-publish">
         <div className="rp-state approved">✓ Approved and published</div>
         {pv.reviewerNote && <p className="muted" style={{ fontSize: 13 }}>Reviewer: {pv.reviewerNote}</p>}
-        <p style={{ fontSize: 14, margin: "10px 0 4px" }}>Add this to your site to show the policy widget:</p>
-        <pre className="rp-code">{snippet}</pre>
-        <div className="rp-actions" style={{ marginTop: 10 }}>
-          <button className="btn sm" onClick={async () => toast((await copyText(snippet)) ? "Snippet copied" : "Could not copy")}>Copy snippet</button>
-          <a className="btn secondary sm" href={`/p/${pv.siteId}`} target="_blank" rel="noreferrer">Privacy page ↗</a>
-          <a className="btn secondary sm" href={`/t/${pv.siteId}`} target="_blank" rel="noreferrer">Terms page ↗</a>
-        </div>
+        {links(pv.siteId)}
       </div>
     );
   }
@@ -619,6 +648,12 @@ function PublishBox({ scan, publishing, onPublish, toast }: { scan: ScanResponse
       <div className="rp-publish">
         <div className="rp-state pending">⏳ Awaiting human review</div>
         <p className="muted" style={{ fontSize: 13, margin: "6px 0 0" }}>A reviewer checks the draft before it goes live. This page updates automatically.</p>
+        {pv.siteId && (
+          <>
+            <p className="muted" style={{ fontSize: 13, margin: "10px 0 0" }}>The links below already work and show "review pending" until the draft is approved.</p>
+            {links(pv.siteId)}
+          </>
+        )}
       </div>
     );
   }
@@ -648,11 +683,11 @@ function Extras({ scan }: { scan: ScanResponse }) {
     <section className="rp-section rp-cards">
       {hints.length > 0 && !scan.coverage?.liveDb && (
         <div className="panel rp-card-accent">
-          <h3>Connect your database (Pro monthly)</h3>
+          <h3>Connect your database</h3>
           <p className="muted" style={{ fontSize: 14 }}>
             We found database settings in your repo ({hints.slice(0, 3).join(", ")}{hints.length > 3 ? "…" : ""}). A read-only check shows who can read personal data, whether row-level security is on, and PII hidden in columns.
           </p>
-          <a className="btn sm" href={scan.isPro ? `/scan/${scan.id}/db` : "/pricing"}>{scan.isPro ? "Connect database" : "See paid plans"}</a>
+          <a className="btn sm" href={scan.isPro ? `/scan/${scan.id}/db` : payHref(scan.id)}>{scan.isPro ? "Connect database" : "Unlock this report"}</a>
         </div>
       )}
       <div className="panel rp-soon">

@@ -7,6 +7,7 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import { AgenticOrg } from "agenticorg-sdk";
+import { withInstructions } from "../lib/agent/instructions";
 
 for (const f of [".env.local", ".env"]) {
   if (!existsSync(f)) continue;
@@ -57,7 +58,7 @@ async function main() {
       const t = Date.now();
       const res = await client.agents.run(reader, {
         action: "extract_claims",
-        inputs: { policy_text: "We only collect your name and email for authentication. We never share data with third parties. We keep data for 1 year." },
+        inputs: withInstructions("extract_claims", { policy_text: "We only collect your name and email for authentication. We never share data with third parties. We keep data for 1 year." }),
       });
       show(`Policy Reader (${Date.now() - t} ms)`, res);
     } catch (e) {
@@ -81,7 +82,7 @@ async function main() {
   if (reviewer) {
     try {
       const t = Date.now();
-      const res = await client.agents.run(reviewer, { action: "draft_policy", inputs });
+      const res = await client.agents.run(reviewer, { action: "draft_policy", inputs: withInstructions("draft_policy", inputs) });
       show(`Compliance Reviewer (${Date.now() - t} ms)`, res);
     } catch (e) {
       console.error("Compliance Reviewer failed:", (e as Error).message);
@@ -93,7 +94,7 @@ async function main() {
     if (!wf) console.log("AGENTICORG_WORKFLOW_ID not set, skipping workflow");
     else {
       try {
-        const res = await client.workflows.run(wf, { payload: { action: "draft_policy", ...inputs } });
+        const res = await client.workflows.run(wf, { payload: withInstructions("draft_policy", { action: "draft_policy", ...inputs }) });
         show("workflows.run", res);
         const id = (res.run_id ?? res.id) as string | undefined;
         if (id) console.log(`\nApprove it in AgenticOrg (Governance > Approvals), then: npx tsx scripts/agent-smoke.ts --run ${id}`);

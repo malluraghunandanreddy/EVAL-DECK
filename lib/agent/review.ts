@@ -1,3 +1,4 @@
+import { withInstructions } from "./instructions";
 import { and, desc, eq } from "drizzle-orm";
 import { db, logEvent, schema } from "../db";
 import type { PolicyVersion, Project, Scan } from "../db/schema";
@@ -119,22 +120,9 @@ export async function requestReview(opts: {
   const workflowId = process.env.AGENTICORG_WORKFLOW_ID;
   const reviewerId = process.env.AGENTICORG_REVIEWER_AGENT_ID;
 
-  if (client && workflowId) {
-    // Path A: workflow = reviewer step -> human approval -> finish. We poll getRun from report polls.
-    try {
-      const res = await withTimeout(client.workflows.run(workflowId, { payload: { action, ...inputs } }), 25_000);
-      const id = res ? (res.run_id ?? res.id ?? res.workflow_run_id) : null;
-      if (typeof id === "string" || typeof id === "number") {
-        mode = "workflow";
-        runId = String(id);
-      } else error = res ? "workflow run returned no run id" : "workflow run timed out";
-    } catch (err) {
-      error = (err as Error).message.slice(0, 300);
-    }
-  }
-
-  if (mode === "manual" && client && reviewerId) {
-    // Path B: reviewer agent drafts; HITL on its publish_policy tool calls POST /api/agent/publish after approval.
+  // Step 1: the Compliance Reviewer agent drafts (hackathon key: run-only, so we take the draft from the
+  // synchronous run; its hitl_triggered status also files an approval item on AgenticOrg).
+  if (client && reviewerId) {
     const res = await runAgent(reviewerId, action, inputs, opts.agentTimeoutMs ?? 60_000);
     const failed = !res || /fail|error/i.test(String(res.status ?? "")) || (!!res.error && !res.output);
     if (res && !failed) {
@@ -154,6 +142,22 @@ export async function requestReview(opts: {
       });
     } else {
       error = (error ? error + "; " : "") + (res ? `agent run ${String(res.status ?? "failed")}: ${String(res.error ?? "").slice(0, 200)}` : "agent run unavailable or timed out");
+    }
+  }
+
+  // Step 2: the "PolicyDrift review" workflow = reviewer step -> human_in_loop -> finish. Starting it creates the
+  // approval item on AgenticOrg. We poll getRun from report polls when the key allows reads; otherwise the draft
+  // stays pending_review for /admin/approvals.
+  if (client && workflowId) {
+    try {
+      const res = await withTimeout(client.workflows.run(workflowId, { payload: withInstructions(action, { action, ...inputs }) }), 25_000);
+      const id = res ? (res.run_id ?? res.id ?? res.workflow_run_id) : null;
+      if (typeof id === "string" || typeof id === "number") {
+        mode = "workflow";
+        runId = String(id);
+      } else error = (error ? error + "; " : "") + (res ? "workflow run returned no run id" : "workflow run timed out");
+    } catch (err) {
+      error = (error ? error + "; " : "") + (err as Error).message.slice(0, 300);
     }
   }
 

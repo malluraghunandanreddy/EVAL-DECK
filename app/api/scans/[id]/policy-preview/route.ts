@@ -3,6 +3,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getUser } from "@/lib/session";
 import { ownedScan } from "@/lib/agent/access";
+import { scanUnlocked } from "@/lib/entitlements";
 import { FREE_SECTIONS, generateFromScan, previewSections } from "@/lib/policy/generate";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +37,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 
   const policy = previewSections(draft.policyMd);
   const terms = previewSections(draft.termsMd);
-  const pro = user.isPro;
+  const pro = scanUnlocked(user, scan);
 
   return NextResponse.json({
     sections: pro ? policy : policy.slice(0, FREE_SECTIONS),

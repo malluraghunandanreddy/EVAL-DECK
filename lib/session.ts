@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { createHmac } from "node:crypto";
 import { db, schema } from "./db";
 import { safeEqual } from "./crypto";
+import { proForAll } from "./plans";
 
 const COOKIE = "pd_session";
 const MAX_AGE = 60 * 60 * 24 * 14;
@@ -44,6 +45,7 @@ export async function getUser() {
   if (!id) return null;
   const [user] = await db.select().from(schema.users).where(eq(schema.users.id, id)).limit(1);
   if (!user) return null;
+  if (proForAll()) return { ...user, isPro: true, proUntil: null };
   // A paid month that has run out is treated as free. Nothing is written; renewing sets a new date.
   if (user.isPro && user.proUntil && user.proUntil.getTime() < Date.now()) return { ...user, isPro: false };
   return user;

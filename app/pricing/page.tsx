@@ -1,15 +1,11 @@
 import SiteHeader from "../components/SiteHeader";
-import InterestButton from "../components/InterestButton";
 import { getUser } from "@/lib/session";
-import { interestedPlans } from "@/lib/interest";
+import { isMonthly } from "@/lib/entitlements";
 import { PLAN_PRICES, rupees } from "@/lib/plans";
 import "./pricing.css";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Pricing · TriLens" };
-
-// The pay button only shows once Pine Labs is configured on the deployment.
-const paymentsLive = () => Boolean(process.env.PINELABS_CLIENT_ID && process.env.PINELABS_CLIENT_SECRET);
 
 type Cell = string | true | false;
 const ROWS: { label: string; free: Cell; single: Cell; monthly: Cell }[] = [
@@ -20,8 +16,8 @@ const ROWS: { label: string; free: Cell; single: Cell; monthly: Cell }[] = [
   { label: "Privacy policy and terms draft", free: "First 2 sections", single: "Full, for one report", monthly: "Full, every report" },
   { label: "Copy and download the policy", free: false, single: true, monthly: true },
   { label: "Publish with the policy widget (human reviewed)", free: false, single: false, monthly: true },
-  { label: "Read-only live database check (coming soon)", free: false, single: false, monthly: true },
-  { label: "Draft update when your repo changes", free: false, single: false, monthly: true },
+  { label: "Read-only live database check (coming soon)", free: false, single: "For that report", monthly: "Every report" },
+  { label: "Agent re-check and policy update on every push", free: false, single: false, monthly: true },
 ];
 
 function show(c: Cell) {
@@ -30,35 +26,23 @@ function show(c: Cell) {
   return c;
 }
 
-export default async function Pricing({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+export default async function Pricing({ searchParams }: { searchParams: Promise<{ error?: string; scan?: string }> }) {
   const user = await getUser();
-  const { error } = await searchParams;
-  const mine = user ? await interestedPlans(user.id) : new Set();
-  const live = paymentsLive();
+  const { error, scan } = await searchParams;
+  const scanId = scan && /^[0-9a-f-]{36}$/i.test(scan) ? scan : null;
+  const onMonthly = !!user && isMonthly(user);
+  const pay = (plan: "single" | "monthly") => `/pay?plan=${plan}${scanId ? `&scan=${scanId}` : ""}`;
 
-  const interest = (plan: "single" | "monthly", variant: "primary" | "secondary") =>
-    user ? (
-      <InterestButton plan={plan} hasEmail={Boolean(user.email)} already={mine.has(plan)} variant={variant} />
-    ) : (
-      <a className={`btn${variant === "secondary" ? " secondary" : ""}`} href="/signin?next=/pricing">Sign in to register interest</a>
-    );
-
-  // Pro monthly: pay now when payments are live, with the interest button beside it.
+  const singleAction = () => {
+    if (!user) return <a className="btn secondary" href="/signin?next=/pricing">Sign in to unlock a report</a>;
+    if (onMonthly) return <a className="btn secondary" href="/dashboard">Included in your Pro</a>;
+    if (scanId) return <a className="btn secondary" href={pay("single")}>Unlock this report</a>;
+    return <a className="btn secondary" href="/dashboard">Open a report to unlock it</a>;
+  };
   const proAction = () => {
-    if (user?.isPro) return <a className="btn secondary" href="/dashboard">You're on Pro</a>;
-    if (!live) return interest("monthly", "primary");
-    return (
-      <div style={{ display: "grid", gap: 8 }}>
-        {user ? (
-          <form action="/api/billing/checkout" method="post" style={{ display: "grid" }}>
-            <button className="btn" type="submit">Pay {rupees(PLAN_PRICES.monthly.rupees)} with Pine Labs</button>
-          </form>
-        ) : (
-          <a className="btn" href="/signin?next=/pricing">Sign in to pay</a>
-        )}
-        {user && interest("monthly", "secondary")}
-      </div>
-    );
+    if (!user) return <a className="btn" href="/signin?next=/pricing">Sign in to go monthly</a>;
+    if (onMonthly) return <a className="btn secondary" href="/dashboard">You're on Pro</a>;
+    return <a className="btn" href={pay("monthly")}>Go monthly</a>;
   };
 
   return (
@@ -71,7 +55,7 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
           Every free scan finds all the gaps and shows the evidence. The paid plans add the fix for each gap and the full privacy policy and terms.
         </p>
         {error && <p className="notice bad">{error}</p>}
-        {user?.isPro && <p className="notice good">You already have Pro. <a href="/dashboard">Back to your apps</a></p>}
+        {onMonthly && <p className="notice good">You already have Pro. <a href="/dashboard">Back to your apps</a></p>}
 
         <div className="plans">
           <section className="plan" aria-labelledby="p-free">
@@ -96,8 +80,9 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
               <li>Fix for every gap in that report</li>
               <li>Full policy and terms draft</li>
               <li>Copy and download</li>
+              <li>Read-only database check for that report</li>
             </ul>
-            {interest("single", "secondary")}
+            {singleAction()}
           </section>
 
           <section className="plan plan-pro" aria-labelledby="p-pro">
@@ -107,17 +92,15 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
             <p className="plan-for">Everything unlocked on every report, and the policy stays in step with your code.</p>
             <ul>
               <li>Fixes and full policy on all reports</li>
-              <li>Publish with the policy widget</li>
-              <li>Live database check, coming soon</li>
-              <li>Draft updates when your repo changes</li>
+              <li>Publish a hosted policy page and embeddable widget</li>
+              <li>Database check on every report</li>
+              <li>Agent re-check and policy update on every push</li>
             </ul>
             {proAction()}
           </section>
         </div>
         <p className="fine">
-          {live
-            ? "Pro monthly is paid online through Pine Labs and lasts 30 days. The single report is not on sale yet, so register interest and we'll email you first."
-            : "Online payment opens after the hackathon. Register interest now and we'll email you first."}{" "}
+          Online card payment through Pine Labs opens after the hackathon. Until then, pay the team and enter the transaction reference at checkout. Pro monthly lasts 30 days.{" "}
           Have a code from the team? <a href="/redeem">Redeem it</a>. Prices exclude GST.
         </p>
 
