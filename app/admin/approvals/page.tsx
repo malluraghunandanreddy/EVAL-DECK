@@ -6,6 +6,7 @@ import { db, schema } from "@/lib/db";
 import { hmacHex, safeEqual } from "@/lib/crypto";
 import { approveVersion, rejectVersion } from "@/lib/agent/approve";
 import { UUID_RE } from "@/lib/agent/access";
+import { liveStats } from "@/lib/admin-live";
 
 export const dynamic = "force-dynamic";
 
@@ -45,11 +46,12 @@ async function login(formData: FormData) {
   redirect(PATH);
 }
 
-async function decide(formData: FormData) {
+// The decision is bound per button: a submit button's own name/value is not included in the FormData a
+// server action receives, so a single action reading formData.get("decision") silently did nothing.
+async function decide(decision: "approve" | "reject", formData: FormData) {
   "use server";
   if (!(await isAdmin())) redirect(PATH);
   const id = String(formData.get("id") ?? "");
-  const decision = String(formData.get("decision") ?? "");
   const note = String(formData.get("note") ?? "").trim().slice(0, 1000) || null;
   if (UUID_RE.test(id)) {
     if (decision === "approve") await approveVersion(id, "admin", note);
@@ -107,6 +109,11 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
 
   const pending = rows.filter((r) => r.v.status === "pending_review");
   const decided = rows.filter((r) => r.v.status !== "pending_review").slice(0, 15);
+  const stats = await liveStats();
+  const lastAgent = await db.select({ at: schema.events.createdAt, payload: schema.events.payload }).from(schema.events)
+    .where(eq(schema.events.type, "agent_action")).orderBy(desc(schema.events.createdAt)).limit(1);
+  const lp = (lastAgent[0]?.payload ?? null) as { status?: string; draftFromAgent?: boolean; error?: string } | null;
+  const lastRun = lastAgent[0] && lp ? { at: lastAgent[0].at, status: lp.status ?? "unknown", draftFromAgent: !!lp.draftFromAgent, error: lp.error } : null;
 
   return (
     <main className="container">
@@ -118,6 +125,23 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
         Fallback for when AgenticOrg Approvals is unavailable. Approving publishes the version to the widget and hosted pages and logs an
         <code> approval</code> event with <code>{"{ via: 'admin' }"}</code>. Prefer approving in AgenticOrg when it is up.
       </p>
+
+      <div className="row" style={{ gap: 10, flexWrap: "wrap", margin: "12px 0 20px" }}>
+        {([
+          ["Users", String(stats.users.total), `${stats.users.last10} in last 10 min`],
+          ["Reports done", String(stats.scans.done), `${stats.scans.active} running`],
+          ["Pending approvals", String(pending.length), `${decided.length} decided`],
+          ["Reader agent", process.env.AGENTICORG_READER_AGENT_ID ? "configured" : "missing", lastRun ? `last run ${fmt.format(lastRun.at)} · ${lastRun.status}` : "no run yet"],
+          ["Reviewer agent", process.env.AGENTICORG_REVIEWER_AGENT_ID ? "configured" : "missing", lastRun ? (lastRun.draftFromAgent ? "last draft came from the agent" : `last run: ${lastRun.error ?? "fallback draft used"}`) : "no run yet"],
+          ["Drift Watch", stats.watch ? `${fmt.format(new Date(stats.watch.at))}` : "no run yet", stats.watch ? `${stats.watch.checked ?? 0} repos checked, ${stats.watch.changed ?? 0} changed` : "GitHub Actions every 5 min"],
+        ] as [string, string, string][]).map(([k, v, sub]) => (
+          <div key={k} className="panel" style={{ minWidth: 150, flex: "1 1 150px", padding: "10px 12px" }}>
+            <div className="muted" style={{ fontSize: 12 }}>{k}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.2 }}>{v}</div>
+            <div className="muted" style={{ fontSize: 12 }}>{sub}</div>
+          </div>
+        ))}
+      </div>
 
       <h2>Pending review ({pending.length})</h2>
       {pending.length === 0 && <p className="muted">Nothing waiting.</p>}
@@ -140,13 +164,13 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
             <summary>Terms draft</summary>
             <pre style={{ whiteSpace: "pre-wrap", fontSize: 13, maxHeight: 320, overflow: "auto" }}>{v.termsMd}</pre>
           </details>
-          <form action={decide} style={{ marginTop: 12 }}>
+          <form action={decide.bind(null, "approve")} style={{ marginTop: 12 }}>
             <input type="hidden" name="id" value={v.id} />
             <label htmlFor={`note-${v.id}`}>Reviewer note (optional, shown to the user on reject)</label>
             <textarea id={`note-${v.id}`} name="note" rows={2} />
             <div className="row" style={{ marginTop: 8 }}>
-              <button className="btn" type="submit" name="decision" value="approve">Approve and publish</button>
-              <button className="btn secondary" type="submit" name="decision" value="reject">Reject</button>
+              <button className="btn" type="submit" formAction={decide.bind(null, "approve")}>Approve and publish</button>
+              <button className="btn secondary" type="submit" formAction={decide.bind(null, "reject")}>Reject</button>
             </div>
           </form>
         </section>

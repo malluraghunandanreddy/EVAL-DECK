@@ -91,33 +91,30 @@ export default async function AdminProof({ searchParams }: { searchParams: Promi
     );
   }
 
-  const [userCount, projectCount, scanCount, eventCount, orderCount, eventsByType, users, scans, events, orders, onboardedUsers, scannedUsers, interestEvents, proUsers] =
-    await Promise.all([
-      db.select({ n: count() }).from(schema.users),
-      db.select({ n: count() }).from(schema.projects),
-      db.select({ n: count() }).from(schema.scans),
-      db.select({ n: count() }).from(schema.events),
-      db.select({ n: count() }).from(schema.orders),
-      db.select({ type: schema.events.type, n: count() }).from(schema.events).groupBy(schema.events.type),
-      db.select({
+  const userCount = await db.select({ n: count() }).from(schema.users);
+  const projectCount = await db.select({ n: count() }).from(schema.projects);
+  const scanCount = await db.select({ n: count() }).from(schema.scans);
+  const eventCount = await db.select({ n: count() }).from(schema.events);
+  const orderCount = await db.select({ n: count() }).from(schema.orders);
+  const eventsByType = await db.select({ type: schema.events.type, n: count() }).from(schema.events).groupBy(schema.events.type);
+  const users = await db.select({
         id: schema.users.id, githubLogin: schema.users.githubLogin, email: schema.users.email,
         privateRepoAccess: schema.users.privateRepoAccess, isPro: schema.users.isPro, createdAt: schema.users.createdAt,
-      }).from(schema.users).orderBy(desc(schema.users.createdAt)).limit(200),
-      db.select({
+      }).from(schema.users).orderBy(desc(schema.users.createdAt)).limit(200);
+  const scans = await db.select({
         id: schema.scans.id, projectId: schema.scans.projectId, status: schema.scans.status,
         error: schema.scans.error, createdAt: schema.scans.createdAt, finishedAt: schema.scans.finishedAt,
-      }).from(schema.scans).orderBy(desc(schema.scans.createdAt)).limit(200),
-      db.select().from(schema.events).orderBy(desc(schema.events.createdAt)).limit(300),
-      db.select().from(schema.orders).orderBy(desc(schema.orders.createdAt)).limit(200),
-      db.select({ n: countDistinct(schema.projects.userId) }).from(schema.projects),
-      db
+      }).from(schema.scans).orderBy(desc(schema.scans.createdAt)).limit(200);
+  const events = await db.select().from(schema.events).orderBy(desc(schema.events.createdAt)).limit(300);
+  const orders = await db.select().from(schema.orders).orderBy(desc(schema.orders.createdAt)).limit(200);
+  const onboardedUsers = await db.select({ n: countDistinct(schema.projects.userId) }).from(schema.projects);
+  const scannedUsers = await db
         .select({ n: countDistinct(schema.projects.userId) })
         .from(schema.scans)
         .innerJoin(schema.projects, eq(schema.projects.id, schema.scans.projectId))
-        .where(eq(schema.scans.status, "done")),
-      db.select().from(schema.events).where(eq(schema.events.type, "interest")).orderBy(desc(schema.events.createdAt)).limit(500),
-      db.select({ n: count() }).from(schema.users).where(eq(schema.users.isPro, true)),
-    ]);
+        .where(eq(schema.scans.status, "done"));
+  const interestEvents = await db.select().from(schema.events).where(eq(schema.events.type, "interest")).orderBy(desc(schema.events.createdAt)).limit(500);
+  const proUsers = await db.select({ n: count() }).from(schema.users).where(eq(schema.users.isPro, true));
   const interestedUsers = new Set(interestEvents.map((e) => e.userId)).size;
   const funnel: [string, number, string][] = [
     ["Signed in", userCount[0].n, "accounts created"],
