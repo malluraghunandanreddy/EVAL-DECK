@@ -134,13 +134,22 @@ export default function ScanReport({ scanId }: { scanId: string }) {
       <Header scan={scan} onShare={share} />
       {loadError && <div className="panel rp-error rp-section">{loadError}</div>}
       <Summary scan={scan} />
+      {!scan.isPro && (
+        <aside className="rp-free-banner">
+          <div>
+            <h2>This is your free report</h2>
+            <p>You can see every gap and the proof behind it. The fix for each gap and the full privacy policy are in the paid plans: ₹50 for this report, or Pro monthly for all of them.</p>
+          </div>
+          <a className="btn" href="/pricing">See paid plans</a>
+        </aside>
+      )}
       <Checklist scan={scan} />
       <Layers scan={scan} />
       <Gaps scan={scan} />
       <PolicyPanel scan={scan} reload={load} toast={toast.show} />
       <Extras scan={scan} />
       <p className="rp-note">
-        PolicyDrift is an automated check of your code, schema and policy text. It is not legal advice.
+        TriLens is an automated check of your code, schema and policy text. It is not legal advice.
       </p>
       {toast.msg && <div className="rp-toast" role="status">{toast.msg}</div>}
     </main>
@@ -155,19 +164,19 @@ function Header({ scan, onShare }: { scan: ScanResponse; onShare: (() => void) |
   return (
     <div className="rp-header">
       <div>
-        <div className="muted" style={{ fontSize: 13 }}>Privacy report</div>
+        <div className="eyebrow">Privacy report</div>
         <h1>{p?.name ?? "Your app"}</h1>
         <div className="rp-meta">
           {p?.repoFullName && <span className="rp-pill">⎇ {p.repoFullName}</span>}
           {fw.map((f) => <span key={f} className="rp-pill">{FRAMEWORK_LABEL[f]}</span>)}
           {scan.finishedAt && <span className="rp-pill">Scanned {new Date(scan.finishedAt).toLocaleString()}</span>}
-          {scan.isPro ? <span className="rp-pill pro">★ Pro</span> : <span className="rp-pill">Free plan</span>}
+          {scan.isPro ? <span className="rp-pill pro">Pro</span> : <span className="rp-pill">Free report</span>}
         </div>
       </div>
       {onShare && (
         <div className="rp-actions">
           <button className="btn secondary sm" onClick={onShare}>Share report</button>
-          {!scan.isPro && <a className="btn sm" href="/pricing">Upgrade to Pro</a>}
+          {!scan.isPro && <a className="btn sm" href="/pricing">Unlock fixes</a>}
         </div>
       )}
     </div>
@@ -307,7 +316,7 @@ function ChecklistRow({ item, gapsById, isPro }: { item: ChecklistItem; gapsById
 function LockedFix() {
   return (
     <a className="rp-lock" href="/pricing">
-      <span>🔒 How to fix (Pro)</span>
+      <span>How to fix: paid plans</span>
       <span>Unlock →</span>
     </a>
   );
@@ -574,7 +583,7 @@ function PolicyPanel({ scan, reload, toast }: { scan: ScanResponse; reload: () =
             <div className="rp-unlock">
               <strong>{hiddenCount} more {hiddenCount === 1 ? "section" : "sections"}</strong>
               <span className="muted" style={{ fontSize: 13 }}>Full policy and terms, copy, download and one-click publish.</span>
-              <a className="btn" href="/pricing">🔒 Unlock with Pro</a>
+              <a className="btn" href="/pricing">Unlock the full policy</a>
             </div>
           </div>
         )}
@@ -639,15 +648,15 @@ function Extras({ scan }: { scan: ScanResponse }) {
     <section className="rp-section rp-cards">
       {hints.length > 0 && !scan.coverage?.liveDb && (
         <div className="panel rp-card-accent">
-          <h3>🗄 Connect your database (Pro)</h3>
+          <h3>Connect your database (Pro monthly)</h3>
           <p className="muted" style={{ fontSize: 14 }}>
             We found database settings in your repo ({hints.slice(0, 3).join(", ")}{hints.length > 3 ? "…" : ""}). A read-only check shows who can read personal data, whether row-level security is on, and PII hidden in columns.
           </p>
-          <a className="btn sm" href={scan.isPro ? `/scan/${scan.id}/db` : "/pricing"}>{scan.isPro ? "Connect database" : "Unlock with Pro"}</a>
+          <a className="btn sm" href={scan.isPro ? `/scan/${scan.id}/db` : "/pricing"}>{scan.isPro ? "Connect database" : "See paid plans"}</a>
         </div>
       )}
       <div className="panel rp-soon">
-        <h3>🛡 Coming soon: agent red-teaming</h3>
+        <h3>Coming soon: agent red-teaming</h3>
         <p className="muted" style={{ fontSize: 14, marginBottom: 0 }}>
           We will probe your AI features with adversarial prompts to see whether they leak personal data they should not.
         </p>

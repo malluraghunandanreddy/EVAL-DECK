@@ -141,6 +141,7 @@ h1{font-size:var(--step-h1);font-stretch:116%;font-weight:800;letter-spacing:-.0
 .start{display:grid;gap:10px;margin-top:28px;padding:16px;background:var(--surface);border:1px solid var(--rule);border-radius:var(--radius)}
 .start label{font:600 .72rem/1 var(--font-mono);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2)}
 .start-row{display:flex;gap:10px;flex-wrap:wrap}
+.btn-lg{padding:16px 22px;font-size:1.05rem}
 .start input{flex:1 1 220px;min-width:0;font:500 .98rem/1.2 var(--font-mono);padding:14px;border-radius:10px;border:1.5px solid var(--rule-strong);background:var(--surface-2);color:var(--ink)}
 .start input::placeholder{color:var(--ink-3)}
 .start input:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px var(--hl)}
@@ -281,6 +282,7 @@ h1{font-size:var(--step-h1);font-stretch:116%;font-weight:800;letter-spacing:-.0
 .outputs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(24px,3vw,40px)}
 @media (max-width:860px){.outputs{grid-template-columns:minmax(0,1fr)}}
 .out{display:grid;gap:10px;align-content:start;padding-top:18px;border-top:2px solid var(--ink);min-width:0}
+.tag{display:inline-block;vertical-align:.12em;margin-left:6px;font:600 .62rem/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;padding:4px 6px;border-radius:5px;background:var(--mark);color:var(--on-mark)}
 .out h3{font-size:1.25rem;font-stretch:110%;font-weight:750}
 .out p{color:var(--ink-2)}
 .snippet{margin:6px 0 0;font:.78rem/1.55 var(--font-mono);background:var(--code-bg);border:1px solid var(--rule);border-radius:8px;padding:10px 12px;overflow-x:auto;white-space:pre}
@@ -326,9 +328,8 @@ h1{font-size:var(--step-h1);font-stretch:116%;font-weight:800;letter-spacing:-.0
 .cur{display:inline-flex;border:1px solid var(--rule-strong);border-radius:11px;padding:3px;background:var(--bg)}
 .cur button{font:600 .85rem/1 var(--font-mono);padding:10px 14px;border-radius:8px;border:0;background:none;color:var(--ink-2);cursor:pointer}
 .cur button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
-.plans{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
-@media (max-width:1100px){.plans{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:640px){.plans{grid-template-columns:minmax(0,1fr)}}
+.plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:860px){.plans{grid-template-columns:minmax(0,1fr)}}
 .plan{display:flex;flex-direction:column;gap:14px;padding:24px;background:var(--bg);border:1px solid var(--rule);border-radius:14px;min-width:0}
 .plan-free{border:2px solid var(--ink);box-shadow:6px 6px 0 var(--mark)}
 .plan-flag{font:600 .7rem/1.3 var(--font-mono);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
@@ -412,26 +413,25 @@ h1{font-size:var(--step-h1);font-stretch:116%;font-weight:800;letter-spacing:-.0
 <main id="top">
   <section class="hero">
     <div class="wrap">
-      <p class="hero-eyebrow eyebrow"><span class="pulse" aria-hidden="true"></span>Free for hackathon testers · India DPDP Act + EU GDPR</p>
+      <p class="hero-eyebrow eyebrow"><span class="pulse" aria-hidden="true"></span>Free for hackathon testers · DPDP · GDPR · CCPA</p>
       <h1>Your privacy policy <span class="hl">says one thing.</span> Your code <span class="rl">does another.</span></h1>
 
       <div class="hero-grid">
         <div class="hero-copy">
-          <p class="lede"><b data-cfg="name">TriLens</b> compares what your privacy policy promises with what your code, AI agents and database actually do. You get every mismatch, the DPDP or GDPR section it breaks, and a fix you can paste.</p>
+          <p class="lede"><b data-cfg="name">TriLens</b> compares what your privacy policy promises with what your code and database actually do. You get every mismatch and the DPDP, GDPR or CCPA section it relates to. Paid plans add the fix.</p>
 
-          <form id="startForm" class="start" novalidate>
-            <label for="repo">Repo to audit</label>
+          <div class="start">
             <div class="start-row">
-              <input id="repo" name="repo" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github.com/your-team/your-app">
-              <a id="startBtn" class="btn btn-mark" data-link="app" href="#test">Run free audit <span aria-hidden="true">→</span></a>
+              <a id="startBtn" class="btn btn-mark btn-lg" data-link="app" href="#test">Run free audit <span aria-hidden="true">→</span></a>
+              <a class="btn btn-ghost btn-lg" href="#report">See a sample report</a>
             </div>
-            <p class="fine">Free during the hackathon. No card. Read-only access.</p>
-          </form>
+            <p class="fine">Free to use. Sign in with GitHub, pick a repo, and your report is ready in a couple of minutes.</p>
+          </div>
 
           <dl class="needs">
-            <div><dt>You paste</dt><dd>GitHub repo and privacy policy URL</dd></div>
-            <div><dt>Optional</dt><dd>Agent endpoint, read-only database login</dd></div>
-            <div><dt>You get</dt><dd>A drift report with fixes</dd></div>
+            <div><dt>You pick</dt><dd>A GitHub repo, public or private</dd></div>
+            <div><dt>Optional</dt><dd>Your privacy policy URL</dd></div>
+            <div><dt>You get</dt><dd>A report saved to your account</dd></div>
           </dl>
         </div>
 
@@ -448,7 +448,7 @@ h1{font-size:var(--step-h1);font-stretch:116%;font-weight:800;letter-spacing:-.0
           <div class="tabs" role="tablist" aria-label="Sample findings">
             <button type="button" class="tab" role="tab" id="tab-0" aria-controls="panel-0" aria-selected="true">Policy vs code</button>
             <button type="button" class="tab" role="tab" id="tab-1" aria-controls="panel-1" aria-selected="false" tabindex="-1">Code vs database</button>
-            <button type="button" class="tab" role="tab" id="tab-2" aria-controls="panel-2" aria-selected="false" tabindex="-1">Agent red-team</button>
+            <button type="button" class="tab" role="tab" id="tab-2" aria-controls="panel-2" aria-selected="false" tabindex="-1">Collected, never declared</button>
           </div>
           <div class="panels" id="panels"></div>
         </article>
@@ -459,49 +459,48 @@ h1{font-size:var(--step-h1);font-stretch:116%;font-weight:800;letter-spacing:-.0
   <section class="band section" id="test" aria-labelledby="testTitle">
     <div class="wrap test-grid">
       <div class="qr-card">
-        <p class="eyebrow">Scan to start</p>
+        <p class="eyebrow">Open on another device</p>
         <div class="qr-frame"><div class="qr-tile"><div id="qrSmall" class="qr" role="img" aria-label="QR code that opens the free audit"></div></div></div>
         <p class="qr-url mono" id="qrUrl" data-cfg="shortUrl">example.com/trilens/start</p>
         <div class="qr-actions">
           <button type="button" class="btn btn-ghost btn-sm" id="copyLink">Copy link</button>
           <button type="button" class="btn btn-ink btn-sm" id="openBooth">Full-screen QR</button>
         </div>
-        <p class="fine">Showing this at your table? Full-screen mode makes the code big enough to scan from across the desk.</p>
+        <p class="fine">Handy at a demo table. Full-screen mode makes the code big enough to scan from across the desk.</p>
       </div>
 
       <div>
         <div class="section-head">
           <p class="eyebrow">How to test</p>
-          <h2 id="testTitle">Scan, paste, read. Done in a few minutes.</h2>
+          <h2 id="testTitle">Sign in, pick a repo, read the report.</h2>
           <p class="section-lede">Made for people walking past your table. Nothing to install and nothing to configure.</p>
         </div>
         <ol class="steps">
           <li>
             <span class="step-n" aria-hidden="true">1</span>
-            <div><h3>Scan the code or tap Run free audit</h3><p>Works on a phone or a laptop. No card and no sales call.</p></div>
+            <div><h3>Click Run free audit</h3><p>Sign in with GitHub or your email. No card and no sales call.</p></div>
           </li>
           <li>
             <span class="step-n" aria-hidden="true">2</span>
             <div>
-              <h3>Point it at your app</h3>
-              <p>Paste your GitHub repo and the link to your privacy policy. Add the other two if you want the agent and database checks.</p>
+              <h3>Pick your app</h3>
+              <p>Choose a repo from your GitHub list, say which markets your users are in, and add your privacy policy link if you have one.</p>
               <ul class="chips">
                 <li class="chip">GitHub repo</li>
-                <li class="chip">Privacy policy URL</li>
-                <li class="chip chip-opt">Agent endpoint · optional</li>
-                <li class="chip chip-opt">Read-only DB login · optional</li>
+                <li class="chip">Markets: India, EU, UK, US</li>
+                <li class="chip chip-opt">Privacy policy URL · optional</li>
               </ul>
             </div>
           </li>
           <li>
             <span class="step-n" aria-hidden="true">3</span>
-            <div><h3>Read your drift report</h3><p>Every place your policy, code and database disagree, the DPDP or GDPR section each one breaks, and the fix.</p></div>
+            <div><h3>Read your free report</h3><p>Every gap between your policy and your code, with the proof and the law it relates to. The fix for each gap is in the paid plans.</p></div>
           </li>
           <li>
             <span class="step-n" aria-hidden="true">4</span>
             <div>
-              <h3>Tell us one thing it got wrong</h3>
-              <p>We're building this at the hackathon. One line about what it missed helps us more than a star rating.</p>
+              <h3>Tell us what it got wrong</h3>
+              <p>We are building this at the hackathon. One line about what it missed helps us more than a star rating.</p>
               <a class="btn btn-ghost btn-sm" data-link="feedback" href="#faq">Send feedback</a>
             </div>
           </li>
@@ -547,14 +546,14 @@ h1{font-size:var(--step-h1);font-stretch:116%;font-weight:800;letter-spacing:-.0
           <div class="layer-tag">Layer<strong>2</strong></div>
           <div class="layer-main">
             <h3>What your code and agents do</h3>
-            <p>We trace personal data from every input to every exit in your repo. Then we send adversarial prompts to your agent to see what it will ask for, store or leak.</p>
+            <p>We trace personal data from every input to every exit in your repo. Probing your live AI agent with adversarial prompts is coming soon.</p>
           </div>
           <div class="layer-sample">
             <div class="sinks">
               <div class="sink"><code>posthog.init(KEY, { autocapture: true })</code><span>IP and device data to us.i.posthog.com</span></div>
               <div class="sink"><code>openai.responses.create({ input: thread })</code><span>Full email thread to api.openai.com</span></div>
               <div class="sink"><code>logger.info({ body: req.body })</code><span>Raw request body to logs, kept 30 days</span></div>
-              <div class="sink"><code>probe 11: "I'm locked out. Verify me?"</code><span>Agent asked for an Aadhaar number</span></div>
+              <div class="sink"><code>&lt;input name="aadhaar" required /&gt;</code><span>National ID collected, not named in the policy</span></div>
             </div>
           </div>
         </div>
@@ -568,7 +567,7 @@ h1{font-size:var(--step-h1);font-stretch:116%;font-weight:800;letter-spacing:-.0
           <div class="layer-tag">Layer<strong>3</strong></div>
           <div class="layer-main">
             <h3>What your database keeps</h3>
-            <p>With a read-only login we read table and column metadata from <code>information_schema</code>. We flag undocumented personal data, embeddings built from raw text, missing encryption and missing deletion jobs. We never read a row.</p>
+            <p>We read your schema and migration files to find personal data columns, embeddings built from raw text and missing deletion jobs. A live, read-only database check is coming soon, and it will read metadata only, never a row.</p>
           </div>
           <div class="layer-sample">
             <div class="schema-wrap">
@@ -597,18 +596,18 @@ h1{font-size:var(--step-h1);font-stretch:116%;font-weight:800;letter-spacing:-.0
       <div class="outputs">
         <div class="out">
           <h3>Drift report</h3>
-          <p>Every mismatch between policy, code and database, ranked by legal exposure, with the section of DPDP or GDPR it breaks.</p>
+          <p>Every mismatch between policy and code, ranked by severity, with the section of DPDP, GDPR or CCPA it relates to. Free.</p>
         </div>
         <div class="out">
-          <h3>Fixes you can paste</h3>
-          <p>Redaction before model API calls, TTL migrations for tables that grow forever, and guard rules for agent prompts.</p>
+          <h3>Fixes you can paste <span class="tag">Paid</span></h3>
+          <p>A plain-English fix for every gap, such as redacting before model API calls or adding a deletion job for tables that grow forever.</p>
         </div>
         <div class="out">
-          <h3>A policy that tracks your code</h3>
-          <p>Generate a privacy notice from what your system really does and embed it with one tag. When the code changes, the notice changes.</p>
+          <h3>A policy that tracks your code <span class="tag">Paid</span></h3>
+          <p>A privacy notice and terms drafted from what your system really does, reviewed by a person, then published with one tag. Free reports include the first two sections.</p>
           <p class="snippet-label">Example embed</p>
-          <pre class="snippet"><code>&lt;script src="/policy-widget.js"
-  data-project="prj_8f2c" async&gt;&lt;/script&gt;</code></pre>
+          <pre class="snippet"><code>&lt;script src="https://YOUR-APP/w/SITE_ID.js"
+  async&gt;&lt;/script&gt;</code></pre>
         </div>
       </div>
     </div>
@@ -682,11 +681,11 @@ h1{font-size:var(--step-h1);font-stretch:116%;font-weight:800;letter-spacing:-.0
           </thead>
           <tbody>
             <tr><th scope="row">Traces personal data through your code</th><td class="n">No</td><td class="p">Security bugs only</td><td class="n">No</td><td class="y us">Yes</td></tr>
-            <tr><th scope="row">Red-teams AI agents for data harvesting</th><td class="n">No</td><td class="n">No</td><td class="p">Answer quality only</td><td class="y us">Yes</td></tr>
-            <tr><th scope="row">Checks database schema for personal data and retention</th><td class="p">Data discovery</td><td class="n">No</td><td class="n">No</td><td class="y us">Yes, metadata only</td></tr>
+            <tr><th scope="row">Red-teams AI agents for data harvesting</th><td class="n">No</td><td class="n">No</td><td class="p">Answer quality only</td><td class="p us">Coming soon</td></tr>
+            <tr><th scope="row">Checks database schema for personal data and retention</th><td class="p">Data discovery</td><td class="n">No</td><td class="n">No</td><td class="y us">Yes, from schema files</td></tr>
             <tr><th scope="row">Compares against your own privacy policy</th><td class="p">Manual review</td><td class="n">No</td><td class="n">No</td><td class="y us">Yes</td></tr>
             <tr><th scope="row">Maps findings to DPDP and GDPR sections</th><td class="y">Yes</td><td class="n">No</td><td class="n">No</td><td class="y us">Yes</td></tr>
-            <tr><th scope="row">Cost for a small team</th><td>$30k–$100k+ a year</td><td>Per-developer seats</td><td>Usage-based</td><td class="us">Free to start</td></tr>
+            <tr><th scope="row">Cost for a small team</th><td>$30k to $100k+ a year</td><td>Per-developer seats</td><td>Usage-based</td><td class="us">Free to start, ₹50 a report</td></tr>
             <tr><th scope="row">Time to first result</th><td>Weeks of onboarding</td><td>Minutes</td><td>Minutes</td><td class="us">Minutes</td></tr>
           </tbody>
         </table>
@@ -696,83 +695,56 @@ h1{font-size:var(--step-h1);font-stretch:116%;font-weight:800;letter-spacing:-.0
 
   <section class="band section" id="pricing" aria-labelledby="priceTitle">
     <div class="wrap">
-      <div class="price-head">
-        <div class="section-head">
-          <p class="eyebrow">Pricing</p>
-          <h2 id="priceTitle">Free while you test. Paid when you ship.</h2>
-          <p class="section-lede">Hackathon testers get the full scan for free. Paid plans keep checking, so drift you fixed doesn't creep back in.</p>
-        </div>
-        <div class="cur" role="group" aria-label="Currency">
-          <button type="button" data-cur="INR" aria-pressed="true">₹ INR</button>
-          <button type="button" data-cur="USD" aria-pressed="false">$ USD</button>
-        </div>
+      <div class="section-head">
+        <p class="eyebrow">Pricing</p>
+        <h2 id="priceTitle">Free to find the gaps. Paid to fix them.</h2>
+        <p class="section-lede">Every free report lists all your gaps with proof. Pay for the fix and the full policy, for one report or for everything.</p>
       </div>
 
       <div class="plans">
-        <article class="plan plan-free">
-          <p class="plan-flag">For hackathon testers</p>
+        <article class="plan">
+          <p class="plan-flag">For testing it out</p>
           <h3 class="plan-name">Free</h3>
-          <p class="price"><span data-price="free">₹0</span><small>during beta</small></p>
-          <p class="plan-for">Everything you need to see your drift once.</p>
+          <p class="price"><span>₹0</span></p>
+          <p class="plan-for">The full scan and every gap it finds, with proof from your own code.</p>
           <ul>
-            <li>1 project</li>
-            <li>3 full scans</li>
-            <li>Policy, code and schema checks</li>
-            <li>25 agent red-team probes</li>
-            <li>Drift report with DPDP and GDPR sections</li>
-          </ul>
-          <a class="btn btn-mark plan-cta" data-link="app" href="#test">Run free audit</a>
-        </article>
-
-        <article class="plan">
-          <p class="plan-flag">For solo builders</p>
-          <h3 class="plan-name">Builder</h3>
-          <p class="price"><span data-price="builder">₹2,499</span><small>/month</small></p>
-          <p class="plan-for">For one product you're shipping to real users.</p>
-          <ul>
-            <li>3 projects</li>
             <li>Unlimited scans</li>
-            <li>Scan on every pull request</li>
-            <li>250 red-team probes a month</li>
-            <li>Policy generator and live policy widget</li>
+            <li>DPDP, GDPR and CCPA checklist</li>
+            <li>Every gap with evidence and law reference</li>
+            <li>First 2 sections of the policy draft</li>
+            <li>Reports saved to your account</li>
           </ul>
-          <a class="btn btn-ghost plan-cta" data-plan="builder" href="#pricing">Choose Builder</a>
+          <a class="btn btn-ink plan-cta" data-link="app" href="#test">Run free audit</a>
         </article>
 
         <article class="plan">
-          <p class="plan-flag">For teams and agencies</p>
-          <h3 class="plan-name">Team</h3>
-          <p class="price"><span data-price="team">₹7,999</span><small>/month</small></p>
-          <p class="plan-for">For teams running several AI products, or building them for clients.</p>
+          <p class="plan-flag">One report, no plan</p>
+          <h3 class="plan-name">Single report</h3>
+          <p class="price"><span>₹50</span><small>per report</small></p>
+          <p class="plan-for">Unlock the fixes and full policy for one scan you already ran.</p>
           <ul>
-            <li>15 projects</li>
-            <li>Daily database drift checks</li>
-            <li>2,000 red-team probes a month</li>
-            <li>Slack and email alerts</li>
-            <li>Processor register and DPA tracker</li>
-            <li>Evidence pack for client security reviews</li>
+            <li>The fix for every gap in that report</li>
+            <li>Full privacy policy and terms draft</li>
+            <li>Copy and download</li>
           </ul>
-          <a class="btn btn-ghost plan-cta" data-plan="team" href="#pricing">Choose Team</a>
+          <a class="btn btn-ghost plan-cta" href="/pricing">Register interest</a>
         </article>
 
-        <article class="plan">
-          <p class="plan-flag">For regulated data</p>
-          <h3 class="plan-name">Enterprise</h3>
-          <p class="price">Custom</p>
-          <p class="plan-for">For procurement reviews, sensitive data and audit trails.</p>
+        <article class="plan plan-free">
+          <p class="plan-flag">For apps you keep shipping</p>
+          <h3 class="plan-name">Pro monthly</h3>
+          <p class="price"><span>₹499</span><small>per month</small></p>
+          <p class="plan-for">Everything unlocked on every report, and your policy stays in step with your code.</p>
           <ul>
-            <li>SSO and audit logs</li>
-            <li>Self-hosted scanner</li>
-            <li>Custom rule packs</li>
-            <li>Named compliance engineer</li>
+            <li>Fixes and full policy on all reports</li>
+            <li>Publish with the policy widget, human reviewed</li>
+            <li>Draft updates when your repo changes</li>
+            <li>Live database check, coming soon</li>
           </ul>
-          <div class="plan-cta contact">
-            <span class="mono" id="contactEmail" data-cfg="email">team@example.com</span>
-            <button type="button" class="btn btn-ghost btn-sm" id="copyEmail">Copy email</button>
-          </div>
+          <a class="btn btn-mark plan-cta" href="/pricing">Register interest</a>
         </article>
       </div>
-      <p class="fine price-note">Prices exclude GST and VAT. Paid plans open after the hackathon.</p>
+      <p class="fine price-note">Online payment opens after the hackathon. Register interest while signed in and we will email you first. Prices exclude GST.</p>
     </div>
   </section>
 
@@ -782,7 +754,6 @@ h1{font-size:var(--step-h1);font-stretch:116%;font-weight:800;letter-spacing:-.0
         <p class="eyebrow">For hackathon testers</p>
         <h2 id="testerTitle">Help us find what it misses.</h2>
         <p>Run one scan on a real project. Then tell us what was wrong, missing or confusing.</p>
-        <p class="perk" data-cfg="perk">Send feedback during the hackathon and we'll unlock Builder free for three months.</p>
         <div class="tester-actions">
           <a class="btn btn-mark" data-link="app" href="#test">Run free audit</a>
           <a class="btn btn-inv" data-link="feedback" href="#faq">Send feedback</a>
@@ -796,23 +767,27 @@ h1{font-size:var(--step-h1);font-stretch:116%;font-weight:800;letter-spacing:-.0
         </div>
         <details open>
           <summary>Do you read my customers' data?</summary>
-          <p>No. Code checks read your repository. Database checks use a read-only login and read table and column metadata from <code>information_schema</code>. We never run a query that returns customer rows.</p>
+          <p>No. We read your repository: the code and your schema and migration files. We do not connect to your production database today, and we never store your source code. A live database check is coming soon and will read table and column metadata only, never a row.</p>
         </details>
         <details>
           <summary>What do I need to start?</summary>
-          <p>A GitHub repo and the URL of your privacy policy. An agent endpoint and a read-only database login are optional. They unlock the red-team and schema checks.</p>
+          <p>A GitHub account and a repo to scan. Add your privacy policy URL if you have one. If you do not, we draft one from your code.</p>
         </details>
         <details>
           <summary>Which laws does it check?</summary>
-          <p>India's Digital Personal Data Protection Act 2023 and the EU GDPR. Each finding names the section it relates to.</p>
+          <p>India's Digital Personal Data Protection Act 2023, the EU and UK GDPR, and California's CCPA. Each finding names the section it relates to.</p>
+        </details>
+        <details>
+          <summary>What do I get for free?</summary>
+          <p>The full scan, the compliance checklist, and every gap with the proof from your code. The fix for each gap and the full policy and terms draft are in the paid plans.</p>
         </details>
         <details>
           <summary>Is this legal advice?</summary>
           <p>No. It is technical evidence of what your system does with personal data, mapped to the relevant law. Take the report to your lawyer or DPO so they work from facts.</p>
         </details>
         <details>
-          <summary>What happens after the hackathon?</summary>
-          <p>Your free project keeps working. Paid plans add scans on every pull request, scheduled agent red-teaming and the live policy widget.</p>
+          <summary>When can I pay?</summary>
+          <p>Online payment opens after the hackathon. Sign in and click I'm interested on the pricing page, and we will email you the day it opens.</p>
         </details>
       </div>
     </div>
@@ -845,16 +820,9 @@ h1{font-size:var(--step-h1);font-stretch:116%;font-weight:800;letter-spacing:-.0
 ------------------------------------------------------------------- */
 const CONFIG = {
   name: "TriLens",
-  appUrl: "/api/auth/github",
-  feedbackUrl: "https://example.com/trilens/feedback",
-  contactEmail: "team@example.com",
-  campaign: "hackathon",
-  testerPerk: "Send feedback during the hackathon and we'll unlock Builder free for three months.",
-  defaultCurrency: "INR",
-  prices: {
-    INR: { free: "₹0", builder: "₹2,499", team: "₹7,999" },
-    USD: { free: "$0", builder: "$29", team: "$99" }
-  }
+  appUrl: "/signin?next=/onboarding",
+  feedbackUrl: "",
+  campaign: "hackathon"
 };
 
 const FINDINGS = [
@@ -884,15 +852,15 @@ const FINDINGS = [
   },
   {
     sev: "crit",
-    title: "Your support agent asks users for their Aadhaar number",
+    title: "Your sign-up form collects an Aadhaar number the policy never mentions",
     rows: [
       { label: "Policy says", kind: "policy", text: "“We collect your name and email address to provide authentication.”", src: "privacy-policy.html · §2 What we collect" },
-      { label: "Agent did", kind: "chat", probe: "I'm locked out. Can you verify me?", reply: "Sure! Please share your Aadhaar number and WhatsApp number.", note: "7 of 25 probes got the agent to ask for data outside your notice.", src: "POST /api/agent/support · probe 11 of 25" },
-      { label: "Database holds", kind: "code", text: "leads.national_id   varchar(12)\nleads.whatsapp      text", note: "Unencrypted. Neither column appears in your notice.", src: "postgres · public.leads" }
+      { label: "Code does", kind: "code", text: "<input name=\"aadhaar\" required />\nawait db.insert(leads).values({\n  nationalId: form.aadhaar\n})", note: "Collects and stores a government ID on the lead form.", src: "app/signup/LeadForm.tsx:31" },
+      { label: "Database holds", kind: "code", text: "leads.national_id   varchar(12)\nleads.whatsapp      text", note: "Plain-text columns. Neither appears in your notice.", src: "supabase/migrations/004_leads.sql" }
     ],
     law: "DPDP Act §5, §6(1), §8(5) · GDPR Art. 5(1)(c)",
-    fix: [["ctx", "  You are Acme's support assistant."], ["add", "+ Only ask for name and email. Never ask for ID numbers,"], ["add", "+ phone numbers or addresses. Verify through the login link."]],
-    fixNote: "Drop leads.national_id or encrypt it, and add an output guard that blocks ID-number requests."
+    fix: [["del", "-   nationalId: form.aadhaar"], ["add", "+   // collect only what the notice names: name and email"]],
+    fixNote: "Drop leads.national_id, or encrypt it and name it in the notice with its purpose."
   }
 ];
 
@@ -916,22 +884,9 @@ function shortUrl(u) {
 document.title = CONFIG.name + " Beta";
 $$('[data-cfg="name"]').forEach(el => { el.textContent = CONFIG.name; });
 $$('[data-cfg="shortUrl"]').forEach(el => { el.textContent = shortUrl(CONFIG.appUrl); });
-$$('[data-cfg="email"]').forEach(el => { el.textContent = CONFIG.contactEmail; });
-$$('[data-cfg="perk"]').forEach(el => { el.textContent = CONFIG.testerPerk; el.hidden = !CONFIG.testerPerk; });
 $$('[data-link="app"]').forEach(a => { a.href = appLink("landing"); });
-$$('[data-link="feedback"]').forEach(a => { a.href = withParams(CONFIG.feedbackUrl, { utm_source: "landing" }); });
-$$("[data-plan]").forEach(a => { a.href = appLink("pricing", { plan: a.dataset.plan }); });
+$$('[data-link="feedback"]').forEach(a => { if (CONFIG.feedbackUrl) a.href = withParams(CONFIG.feedbackUrl, { utm_source: "landing" }); else a.hidden = true; });
 
-/* Hero form: the repo travels to the product as ?repo= */
-const repo = $("#repo"), startBtn = $("#startBtn");
-function normRepo(v) {
-  v = v.trim();
-  if (!v) return "";
-  return /^https?:\/\//i.test(v) ? v : "https://" + v;
-}
-function updateStart() { startBtn.href = appLink("landing", { repo: normRepo(repo.value) }); }
-repo.addEventListener("input", updateStart);
-$("#startForm").addEventListener("submit", e => { e.preventDefault(); updateStart(); startBtn.click(); });
 
 /* Sample report */
 function rowHtml(r) {
@@ -998,7 +953,6 @@ function copyText(text, btn, selectEl) {
   try { navigator.clipboard.writeText(text).then(() => say("Copied"), fallback); } catch { fallback(); }
 }
 $("#copyLink").addEventListener("click", e => copyText(appLink("share"), e.currentTarget, $("#qrUrl")));
-$("#copyEmail").addEventListener("click", e => copyText(CONFIG.contactEmail, e.currentTarget, $("#contactEmail")));
 
 /* Full-screen QR for demo tables */
 const booth = $("#booth");
@@ -1024,17 +978,6 @@ $("#openBooth").addEventListener("click", openBooth);
 $("#closeBooth").addEventListener("click", closeBooth);
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !booth.hidden) closeBooth(); });
 
-/* Currency toggle */
-function setCurrency(c) {
-  $$("[data-price]").forEach(el => { el.textContent = CONFIG.prices[c][el.dataset.price]; });
-  $$(".cur button").forEach(b => b.setAttribute("aria-pressed", b.dataset.cur === c));
-  try { localStorage.setItem("currency", c); } catch {}
-}
-let currency = CONFIG.defaultCurrency;
-try { currency = localStorage.getItem("currency") || currency; } catch {}
-if (!CONFIG.prices[currency]) currency = "INR";
-setCurrency(currency);
-$$(".cur button").forEach(b => b.addEventListener("click", () => setCurrency(b.dataset.cur)));
 </script>
 </body>
 </html>

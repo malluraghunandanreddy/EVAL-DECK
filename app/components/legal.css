@@ -1,0 +1,6 @@
+.legal-doc { max-width: 720px; }
+.legal-doc h1 { font-size: clamp(1.9rem, 4vw, 2.5rem); margin: 8px 0 16px; }
+.legal-doc h2 { font-size: 1.15rem; margin: 32px 0 8px; }
+.legal-doc p, .legal-doc li { font-family: var(--font-legal); font-size: 1.1rem; line-height: 1.6; color: var(--text); }
+.legal-doc ul { padding-left: 1.2em; }
+.legal-doc .draft { font: 500 .88rem/1.5 var(--font-body); color: var(--ink-2); background: var(--mark-soft); border: 1px solid var(--pro-line); border-radius: 10px; padding: 10px 14px; }

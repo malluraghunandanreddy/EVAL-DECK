@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { and, eq, isNull } from "drizzle-orm";
 import { db, schema, logEvent } from "@/lib/db";
 import { setSession } from "@/lib/session";
+import SiteHeader from "../../components/SiteHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,8 @@ export default async function EmailSignup({ searchParams }: { searchParams: Prom
   const { error } = await searchParams;
   const message = error ? ERRORS[error] ?? `Sign-in problem: ${error}` : null;
   return (
+    <>
+    <SiteHeader />
     <main className="container" style={{ maxWidth: 480 }}>
       <h1>Sign up with email</h1>
       <p className="muted">
@@ -58,5 +61,6 @@ export default async function EmailSignup({ searchParams }: { searchParams: Prom
         </div>
       </form>
     </main>
+    </>
   );
 }

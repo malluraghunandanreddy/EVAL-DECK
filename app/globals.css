@@ -1,17 +1,99 @@
+/* Shared look for the app screens. Same palette and type as public/landing.html.
+   Legacy token names (--panel, --line, --text, --muted, --accent, --good, --warn, --bad)
+   are kept so older inline styles and report.css keep working. */
 :root {
-  --bg: #0b0d12; --panel: #141821; --line: #252b38; --text: #e8ebf2; --muted: #9aa3b5;
-  --accent: #6c8cff; --good: #3ecf8e; --warn: #f5b84a; --bad: #ff6b6b; --radius: 10px;
+  --bg: #EDF0F4;
+  --panel: #FFFFFF;
+  --panel-2: #F5F7FA;
+  --code-bg: #F1F4F8;
+  --text: #13203A;
+  --ink-2: #46536D;
+  --muted: #5F6B82;
+  --line: #D4DAE3;
+  --line-strong: #A9B4C6;
+  --accent: #13203A;
+  --mark: #F6DE48;
+  --on-mark: #13203A;
+  --mark-soft: #FBF3B8;
+  --pro-line: #D9C93A;
+  --chip: #E6EAF1;
+  --stamp: #13203A;
+  --good: #1A7A51;
+  --good-bg: #E2F2EA;
+  --warn: #8F610C;
+  --warn-bg: #FAEFD6;
+  --bad: #BF3328;
+  --bad-bg: #FBE8E5;
+  --radius: 12px;
+  --shadow: 0 1px 0 rgba(19, 32, 58, .04), 0 22px 44px -28px rgba(19, 32, 58, .3);
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-legal: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color-scheme: light;
 }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0C1422; --panel: #121C2F; --panel-2: #172238; --code-bg: #0F182A;
+    --text: #E4E9F1; --ink-2: #A6B1C4; --muted: #8C98AE; --line: #243049; --line-strong: #3A4764;
+    --accent: #E4E9F1; --mark: #EED84E; --on-mark: #13203A; --mark-soft: rgba(238, 216, 78, .14);
+    --pro-line: #6B6120; --chip: #1B2740; --stamp: #03060C;
+    --good: #55C893; --good-bg: rgba(85, 200, 147, .13);
+    --warn: #EDB653; --warn-bg: rgba(237, 182, 83, .14);
+    --bad: #FF7D6E; --bad-bg: rgba(255, 125, 110, .13);
+    --shadow: 0 22px 44px -28px rgba(0, 0, 0, .75);
+    color-scheme: dark;
+  }
+}
+
 * { box-sizing: border-box; }
-html, body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-a { color: var(--accent); }
-.container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
-.btn { display: inline-block; background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 10px 16px; font-weight: 600; cursor: pointer; text-decoration: none; }
-.btn.secondary { background: transparent; border: 1px solid var(--line); color: var(--text); }
-.btn:disabled { opacity: .5; cursor: default; }
-input, select, textarea { background: #0f1219; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; font: inherit; width: 100%; }
-label { display: block; margin: 12px 0 4px; color: var(--muted); font-size: 13px; }
+html { -webkit-text-size-adjust: 100%; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/1.6 var(--font-body); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; }
+h1 { font-weight: 800; font-stretch: 112%; letter-spacing: -.025em; line-height: 1.1; }
+h2 { font-weight: 760; font-stretch: 108%; letter-spacing: -.015em; line-height: 1.2; }
+a { color: var(--text); text-underline-offset: 3px; text-decoration-color: var(--line-strong); }
+a:hover { text-decoration-color: var(--text); }
+code { font-family: var(--font-mono); font-size: .88em; }
+:focus-visible { outline: 2.5px solid var(--text); outline-offset: 3px; border-radius: 4px; }
+.container { max-width: 1040px; margin: 0 auto; padding: 32px max(20px, env(safe-area-inset-right, 0px)) 48px max(20px, env(safe-area-inset-left, 0px)); }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
 .muted { color: var(--muted); }
 .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-.legal { text-align: center; color: var(--muted); font-size: 12px; padding: 24px 16px; }
+.eyebrow { font: 600 .74rem/1.35 var(--font-mono); letter-spacing: .09em; text-transform: uppercase; color: var(--ink-2); }
+.mono { font-family: var(--font-mono); }
+
+/* Buttons: same stamp style as the landing page */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--mark); color: var(--on-mark); border: 1.5px solid var(--stamp); border-radius: 10px; padding: 11px 17px; font: 650 .96rem/1.1 var(--font-body); font-stretch: 104%; cursor: pointer; text-decoration: none; box-shadow: 3px 3px 0 var(--stamp); transition: transform .15s ease, box-shadow .15s ease; }
+.btn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--stamp); }
+.btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--stamp); }
+.btn.secondary { background: transparent; color: var(--text); border-color: var(--line-strong); box-shadow: none; }
+.btn.secondary:hover { transform: none; border-color: var(--text); background: var(--panel-2); }
+.btn.ink { background: var(--text); color: var(--bg); border-color: var(--text); box-shadow: none; }
+.btn:disabled { opacity: .55; cursor: default; transform: none; box-shadow: none; }
+
+input, select, textarea { background: var(--panel-2); color: var(--text); border: 1.5px solid var(--line-strong); border-radius: 10px; padding: 11px 12px; font: inherit; width: 100%; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--text); box-shadow: 0 0 0 3px var(--mark-soft); }
+input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--text); }
+label { display: block; margin: 14px 0 5px; color: var(--ink-2); font: 600 .78rem/1.3 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; }
+
+/* Site header */
+.site-top { position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: 1px solid var(--line); padding-top: env(safe-area-inset-top, 0px); }
+.site-top-in { max-width: 1040px; margin: 0 auto; display: flex; align-items: center; gap: 16px; min-height: 60px; padding: 0 max(20px, env(safe-area-inset-right, 0px)) 0 max(20px, env(safe-area-inset-left, 0px)); }
+.site-brand { display: inline-flex; align-items: center; gap: 9px; text-decoration: none; font: 800 1.15rem/1 var(--font-display); font-stretch: 120%; letter-spacing: -.01em; }
+.site-brand svg { flex: none; }
+.site-nav { display: flex; gap: 2px; margin-left: auto; align-items: center; }
+.site-nav a { text-decoration: none; font-size: .92rem; color: var(--ink-2); padding: 8px 11px; border-radius: 8px; }
+.site-nav a:hover { color: var(--text); background: var(--panel); }
+.site-nav a.current { color: var(--text); font-weight: 650; }
+
+.legal { text-align: center; color: var(--muted); font-size: .8rem; padding: 28px 16px 36px; }
+.legal a { color: var(--muted); }
+
+.notice { padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); font-size: .95rem; }
+.notice.good { border-color: var(--good); background: var(--good-bg); }
+.notice.bad { border-color: var(--bad); background: var(--bad-bg); color: var(--bad); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: .001ms !important; animation-duration: .001ms !important; }
+}

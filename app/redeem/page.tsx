@@ -4,6 +4,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db, schema, logEvent } from "@/lib/db";
 import { getUser } from "@/lib/session";
 import { safeEqual } from "@/lib/crypto";
+import SiteHeader from "../components/SiteHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -44,10 +45,12 @@ export default async function Redeem({ searchParams }: { searchParams: Promise<{
   const user = await getUser();
   const { error } = await searchParams;
   return (
+    <>
+    <SiteHeader />
     <main className="container" style={{ maxWidth: 480 }}>
       <h1>Redeem a Pro code</h1>
       {!user ? (
-        <a className="btn" href="/api/auth/github?next=/redeem">Sign in with GitHub first</a>
+        <a className="btn" href="/signin?next=/redeem">Sign in first</a>
       ) : user.isPro ? (
         <p>You are already on Pro. <a href="/dashboard">Back to your apps</a></p>
       ) : (
@@ -59,5 +62,6 @@ export default async function Redeem({ searchParams }: { searchParams: Promise<{
         </form>
       )}
     </main>
+    </>
   );
 }

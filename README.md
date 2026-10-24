@@ -22,8 +22,11 @@ Import the repo in Vercel, add every variable from `.env.example` under Project 
 
 ---
 
-# TriLens landing page
+# Frontend notes
 
-Single-file landing page (`index.html`) for the hackathon beta. Edit the `CONFIG` block at the bottom of the file to set the product name, app URL, feedback URL, contact email and prices.
-
-This is the frontend design draft. It is meant to be compared with the product frontend before finalizing.
+- Landing page: `public/landing.html` (single file, edit the `CONFIG` block at the bottom). Shown at `/`.
+- Shared look: `app/globals.css` (tokens match the landing page). Header: `app/components/SiteHeader.tsx`.
+- Sign-in: `/signin` (GitHub, or email fallback). Pricing and "I'm interested": `/pricing`, `POST /api/interest`.
+- Plans and prices shown on the site: `lib/plans.ts` (single report Rs 50, Pro monthly Rs 499 is a placeholder).
+- Hackathon proof: `/admin/proof` shows the funnel (signed in, set up, got a report, interested, paid) and the interested list; `/admin/interest.csv` exports it.
+- Terms and privacy: `/terms`, `/privacy` (beta drafts, set `CONTACT_EMAIL` to show a contact line).

@@ -1,17 +1,21 @@
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/session";
 import Onboarding from "./Onboarding";
+import SiteHeader from "../components/SiteHeader";
 
 export const dynamic = "force-dynamic";
 
 export default async function OnboardingPage() {
   const user = await getUser();
-  if (!user) redirect("/api/auth/github");
+  if (!user) redirect("/signin?next=/onboarding");
   return (
+    <>
+    <SiteHeader />
     <Onboarding
       githubLogin={user.githubLogin}
       githubConnected={Boolean(user.githubTokenEnc)}
       privateRepoAccess={user.privateRepoAccess}
     />
+    </>
   );
 }

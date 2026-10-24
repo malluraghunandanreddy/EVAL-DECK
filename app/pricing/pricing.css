@@ -1,0 +1,27 @@
+.pricing h1 { font-size: clamp(2rem, 4.4vw, 3.1rem); max-width: 18ch; margin: 8px 0 14px; }
+.pricing .lede { color: var(--ink-2); font-size: 1.1rem; max-width: 56ch; margin: 0 0 24px; }
+.pricing .fine { color: var(--muted); font-size: .88rem; margin-top: 18px; max-width: 70ch; }
+.plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 28px; align-items: stretch; }
+@media (max-width: 860px) { .plans { grid-template-columns: minmax(0, 1fr); } }
+.plan { display: flex; flex-direction: column; gap: 12px; padding: 24px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; min-width: 0; }
+.plan h2 { margin: 0; font-size: 1.35rem; }
+.plan-pro { border: 2px solid var(--text); box-shadow: 6px 6px 0 var(--mark); }
+.plan-flag { margin: 0; font: 600 .7rem/1.3 var(--font-mono); letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+.price { margin: 0; display: flex; align-items: baseline; gap: 8px; font: 800 2.4rem/1 var(--font-display); font-stretch: 110%; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.price small { font: 500 .88rem/1 var(--font-body); letter-spacing: 0; color: var(--muted); }
+.plan-for { margin: 0; color: var(--ink-2); font-size: .96rem; line-height: 1.45; }
+.plan ul { list-style: none; margin: 0 0 8px; padding: 14px 0 0; border-top: 1px solid var(--line); display: grid; gap: 8px; align-content: start; font-size: .94rem; flex: 1; }
+.plan li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 8px; }
+.plan li::before { content: "✓"; font: 700 .85rem/1.5 var(--font-mono); color: var(--good); }
+.cmp-title { font-size: 1.4rem; margin: 48px 0 14px; }
+.cmp-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+.cmp { width: 100%; min-width: 640px; border-collapse: collapse; font-size: .94rem; }
+.cmp th, .cmp td { padding: 13px 16px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+.cmp tbody tr:last-child th, .cmp tbody tr:last-child td { border-bottom: 0; }
+.cmp thead th { font: 600 .7rem/1.3 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.cmp tbody th { font-weight: 500; width: 38%; }
+.cmp td { color: var(--ink-2); }
+.cmp .hi { background: var(--mark-soft); }
+.cmp .yes { color: var(--good); }
+.cmp .no { color: var(--muted); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

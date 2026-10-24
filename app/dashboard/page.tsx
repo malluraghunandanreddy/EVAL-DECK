@@ -2,96 +2,102 @@ import { redirect } from "next/navigation";
 import { desc, eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getUser } from "@/lib/session";
+import { interestedPlans } from "@/lib/interest";
+import SiteHeader from "../components/SiteHeader";
+import "./dashboard.css";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Your audits · TriLens" };
 
-const STATUS_COLOR: Record<string, string> = {
-  queued: "var(--muted)",
-  running: "var(--warn)",
-  done: "var(--good)",
-  failed: "var(--bad)",
-};
+const STATUS_LABEL: Record<string, string> = { queued: "Queued", running: "Running", done: "Ready", failed: "Failed" };
+
+const fmt = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false });
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ upgraded?: string }> }) {
   const user = await getUser();
-  if (!user) redirect("/api/auth/github");
+  if (!user) redirect("/signin?next=/dashboard");
   const { upgraded } = await searchParams;
 
-  const projects = await db
-    .select()
-    .from(schema.projects)
-    .where(eq(schema.projects.userId, user.id))
-    .orderBy(desc(schema.projects.createdAt));
-  const ids = projects.map((p) => p.id);
-  const scans = ids.length
+  const projects = await db.select().from(schema.projects).where(eq(schema.projects.userId, user.id)).orderBy(desc(schema.projects.createdAt));
+  const byId = new Map(projects.map((p) => [p.id, p]));
+  const scans = projects.length
     ? await db
         .select({ id: schema.scans.id, projectId: schema.scans.projectId, status: schema.scans.status, createdAt: schema.scans.createdAt })
         .from(schema.scans)
-        .where(inArray(schema.scans.projectId, ids))
+        .where(inArray(schema.scans.projectId, projects.map((p) => p.id)))
         .orderBy(desc(schema.scans.createdAt))
+        .limit(100)
     : [];
-  const latest = new Map<string, (typeof scans)[number]>();
-  for (const s of scans) if (!latest.has(s.projectId)) latest.set(s.projectId, s);
+  const interested = user.isPro ? new Set() : await interestedPlans(user.id);
+  const ready = scans.filter((s) => s.status === "done").length;
 
   return (
-    <main className="container">
-      <div className="row" style={{ justifyContent: "space-between" }}>
-        <div className="row">
-          <h1 style={{ margin: 0 }}>Your apps</h1>
-          {user.isPro ? (
-            <span style={{ background: "var(--good)", color: "#06140d", borderRadius: 6, padding: "2px 8px", fontWeight: 700, fontSize: 12 }}>
-              PRO
-            </span>
-          ) : (
-            <span className="muted" style={{ fontSize: 13 }}>Free plan</span>
-          )}
+    <>
+      <SiteHeader current="dashboard" />
+      <main className="container dash">
+        <div className="dash-head">
+          <div>
+            <p className="eyebrow">{user.githubLogin ? `@${user.githubLogin}` : user.email}</p>
+            <h1>Your audits</h1>
+          </div>
+          <div className="row">
+            <span className={`plan-chip${user.isPro ? " pro" : ""}`}>{user.isPro ? "Pro" : "Free plan"}</span>
+            <a className="btn" href="/onboarding">New audit</a>
+          </div>
         </div>
-        <div className="row">
-          {!user.isPro && <a className="btn secondary" href="/pricing">Upgrade to Pro</a>}
-          <a className="btn" href="/onboarding">New project</a>
-          <a className="muted" href="/api/auth/logout">Sign out</a>
-        </div>
-      </div>
-      <p className="muted">{user.githubLogin ? `@${user.githubLogin}` : user.email}</p>
 
-      {upgraded && user.isPro && (
-        <p className="panel" style={{ borderColor: "var(--good)" }}>You are on Pro now. Fixes and full policies are unlocked on every report.</p>
-      )}
+        {upgraded && user.isPro && <p className="notice good">You're on Pro. Fixes and full policies are unlocked on every report.</p>}
 
-      {projects.length === 0 ? (
-        <div className="panel">
-          <p>No projects yet.</p>
-          <a className="btn" href="/onboarding">Scan your first app</a>
-        </div>
-      ) : (
-        <div style={{ display: "grid", gap: 12 }}>
-          {projects.map((p) => {
-            const s = latest.get(p.id);
-            return (
-              <div key={p.id} className="panel row" style={{ justifyContent: "space-between" }}>
-                <div>
-                  <strong>{p.name}</strong>
-                  <div className="muted" style={{ fontSize: 13 }}>
-                    {p.repoFullName ?? (p.source === "zip" ? "zip upload" : "no repo")} · {p.frameworks.join(", ")}
-                  </div>
-                </div>
-                <div className="row">
-                  {s ? (
-                    <>
-                      <span style={{ color: STATUS_COLOR[s.status] ?? "var(--muted)", fontSize: 13 }}>
-                        {s.status} · {s.createdAt.toISOString().slice(0, 16).replace("T", " ")} UTC
-                      </span>
-                      <a className="btn secondary" href={`/scan/${s.id}`}>Open report</a>
-                    </>
-                  ) : (
-                    <span className="muted" style={{ fontSize: 13 }}>No scan yet</span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </main>
+        <dl className="stats">
+          <div><dt>Apps audited</dt><dd>{projects.length}</dd></div>
+          <div><dt>Scans run</dt><dd>{scans.length}</dd></div>
+          <div><dt>Reports ready</dt><dd>{ready}</dd></div>
+        </dl>
+
+        {!user.isPro && (
+          <aside className="upsell">
+            <div>
+              <h2>Want the fix for every gap?</h2>
+              <p>Free reports show every gap and its proof. A single report is ₹50, or go Pro monthly for everything.</p>
+            </div>
+            {interested.size > 0 ? (
+              <span className="notice good" style={{ margin: 0 }}>Interest noted. We'll email you.</span>
+            ) : (
+              <a className="btn" href="/pricing">See paid plans</a>
+            )}
+          </aside>
+        )}
+
+        <h2 className="sec">History</h2>
+        {scans.length === 0 ? (
+          <div className="panel empty">
+            <p style={{ margin: "0 0 14px" }}>You haven't run an audit yet. Pick a GitHub repo and it takes a couple of minutes.</p>
+            <a className="btn" href="/onboarding">Run your first audit</a>
+          </div>
+        ) : (
+          <div className="hist-wrap">
+            <table className="hist">
+              <thead>
+                <tr><th scope="col">App</th><th scope="col">Repo</th><th scope="col">Scanned (IST)</th><th scope="col">Status</th><th scope="col"><span className="sr">Report</span></th></tr>
+              </thead>
+              <tbody>
+                {scans.map((s) => {
+                  const p = byId.get(s.projectId);
+                  return (
+                    <tr key={s.id}>
+                      <th scope="row">{p?.name ?? "App"}</th>
+                      <td className="mono">{p?.repoFullName ?? (p?.source === "zip" ? "zip upload" : "-")}</td>
+                      <td>{fmt.format(s.createdAt)}</td>
+                      <td><span className={`st st-${s.status}`}>{STATUS_LABEL[s.status] ?? s.status}</span></td>
+                      <td><a href={`/scan/${s.id}`}>Open report →</a></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </main>
+    </>
   );
 }

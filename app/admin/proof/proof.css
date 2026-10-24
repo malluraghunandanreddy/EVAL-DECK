@@ -1,0 +1,13 @@
+.funnel { list-style: none; margin: 24px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); overflow: hidden; }
+.funnel li { display: grid; gap: 2px; padding: 16px 18px; min-width: 0; align-content: start; }
+.funnel li + li { border-left: 1px solid var(--line); }
+.funnel .fv { font: 800 2.4rem/1 var(--font-display); font-stretch: 110%; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.funnel .fk { font-weight: 650; margin-top: 6px; }
+.funnel .fs { font-size: .8rem; color: var(--muted); }
+.funnel .fb { height: 5px; background: var(--chip); border-radius: 99px; margin-top: 10px; overflow: hidden; }
+.funnel .fb i { display: block; height: 100%; background: var(--text); border-radius: 99px; }
+.funnel li:nth-child(4) .fb i { background: var(--mark); box-shadow: inset 0 0 0 1px var(--stamp); }
+@media (max-width: 860px) { .funnel { grid-template-columns: minmax(0, 1fr); } .funnel li + li { border-left: 0; border-top: 1px solid var(--line); } }
+.pt { width: 100%; border-collapse: collapse; font-size: .86rem; background: var(--panel); border: 1px solid var(--line); }
+.pt th, .pt td { padding: 9px 12px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+.pt th { font: 600 .68rem/1.3 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
