@@ -154,13 +154,27 @@ export async function requestReview(opts: {
   if (client && workflowId) {
     try {
       const wfStarted = Date.now();
-      const res = await withTimeout(client.workflows.run(workflowId, { payload: withInstructions(action, { action, ...inputs }) }), 25_000);
+      // The workflow exists to file the human-approval item on AgenticOrg; the tenant rejects large bodies,
+      // so send a compact payload (the reviewer agent already drafted from the full report above).
+      const gapsIn = (inputs as { gaps?: { id: string; severity: string; title: string }[] }).gaps ?? [];
+      const compact = {
+        action, scan_id: scan.id, policy_version_id: version.id, app_name: project.name, frameworks: projectFrameworks(project),
+        agent_run_id: runId, draft_chars: (patch.policyMd ?? draft.policyMd).length,
+        gaps: gapsIn.slice(0, 25).map((g) => ({ id: g.id, severity: g.severity, title: g.title })),
+        summary: (patch.summary ?? draft.summary ?? "").slice(0, 600),
+        review_url: `${(process.env.APP_BASE_URL ?? "").replace(/\/$/, "")}/admin/approvals`,
+      };
+      let wfError: string | null = null;
+      const res = await Promise.race([
+        client.workflows.run(workflowId, { payload: compact }).catch((e: Error) => { wfError = e.message.slice(0, 300); return null; }),
+        new Promise<null>((r) => setTimeout(() => r(null), 25_000)),
+      ]);
       const id = res ? (res.run_id ?? res.id ?? res.workflow_run_id) : null;
-      console.log(JSON.stringify({ tag: "agenticorg", event: res ? "workflow_started" : "workflow_timeout", action, workflowId, runId: id ?? null, status: res?.status ?? null, ms: Date.now() - wfStarted }));
+      console.log(JSON.stringify({ tag: "agenticorg", event: res ? "workflow_started" : wfError ? "workflow_error" : "workflow_timeout", action, workflowId, runId: id ?? null, status: res?.status ?? null, ms: Date.now() - wfStarted, error: wfError, payloadBytes: JSON.stringify(compact).length }));
       if (typeof id === "string" || typeof id === "number") {
         mode = "workflow";
         runId = String(id);
-      } else error = (error ? error + "; " : "") + (res ? "workflow run returned no run id" : "workflow run timed out");
+      } else error = (error ? error + "; " : "") + (res ? "workflow run returned no run id" : wfError ?? "workflow run timed out");
     } catch (err) {
       error = (error ? error + "; " : "") + (err as Error).message.slice(0, 300);
     }
