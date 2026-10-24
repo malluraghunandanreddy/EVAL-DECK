@@ -10,6 +10,7 @@ export default function Privacy() {
         <li><strong>Account:</strong> your GitHub login and email address, or the email you sign up with.</li>
         <li><strong>Projects:</strong> the app name, the repository name, the markets you select and the privacy policy URL you give us.</li>
         <li><strong>Reports:</strong> the findings from each scan, including short code excerpts used as evidence.</li>
+        <li><strong>Database check (optional):</strong> if you paste a database connection string, we use it for one read-only check and then discard it. We keep only table and column names and counts; no rows and no credentials are stored or sent to an AI.</li>
         <li><strong>Usage:</strong> events such as sign-up, scan started and finished, and interest in a paid plan, so we can run the service and count hackathon usage.</li>
       </ul>
       <h2>What we read</h2>

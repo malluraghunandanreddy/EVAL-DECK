@@ -681,11 +681,21 @@ function Extras({ scan }: { scan: ScanResponse }) {
   const hints = arr(scan.dbEnvHints);
   return (
     <section className="rp-section rp-cards">
-      {hints.length > 0 && !scan.coverage?.liveDb && (
+      {scan.coverage?.liveDb && (
+        <div className="panel rp-card-accent">
+          <h3>Database checked ✓</h3>
+          <p className="muted" style={{ fontSize: 14 }}>
+            {arr(scan.dbFindings).length} findings from your live database are included above (row-level security, broad read access, personal-data columns).
+          </p>
+          <a className="btn secondary sm" href={`/scan/${scan.id}/db`}>Run again</a>
+        </div>
+      )}
+      {!scan.coverage?.liveDb && (
         <div className="panel rp-card-accent">
           <h3>Connect your database</h3>
           <p className="muted" style={{ fontSize: 14 }}>
-            We found database settings in your repo ({hints.slice(0, 3).join(", ")}{hints.length > 3 ? "…" : ""}). A read-only check shows who can read personal data, whether row-level security is on, and PII hidden in columns.
+            {hints.length > 0 ? `We found database settings in your repo (${hints.slice(0, 3).join(", ")}${hints.length > 3 ? "…" : ""}). ` : "Use Supabase or any Postgres? "}
+            A read-only check shows who can read personal data, whether row-level security is on, and PII hidden in columns.
           </p>
           <a className="btn sm" href={scan.isPro ? `/scan/${scan.id}/db` : payHref(scan.id)}>{scan.isPro ? "Connect database" : "Unlock this report"}</a>
         </div>
