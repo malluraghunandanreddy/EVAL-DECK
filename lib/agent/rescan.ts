@@ -6,6 +6,7 @@ import type { Gap } from "../types";
 import { decrypt } from "../crypto";
 import { runScan } from "@/lib/scan/run";
 import { latestApproved, requestReview } from "./review";
+import { notify } from "../notify";
 
 const GH = "https://api.github.com";
 
@@ -65,10 +66,56 @@ export async function runScanAndReview(scanId: string): Promise<void> {
     return;
   }
   try {
+    await notifyChange(scanId);
+  } catch (err) {
+    console.error("notifyChange failed", scanId, (err as Error).message);
+  }
+  try {
     await afterScan(scanId);
   } catch (err) {
     console.error("afterScan failed", scanId, (err as Error).message);
   }
+}
+
+/**
+ * Drift Watch notification: after a re-scan triggered by a repo change, compare with the previous finished
+ * scan of the same project and tell the owner what moved (dashboard, plus email when configured).
+ * Only for scans that came from a change (repo_changed event); the first scan of a project is not a change.
+ */
+export async function notifyChange(scanId: string): Promise<void> {
+  const [scan] = await db.select().from(schema.scans).where(eq(schema.scans.id, scanId)).limit(1);
+  if (!scan) return;
+  const [project] = await db.select().from(schema.projects).where(eq(schema.projects.id, scan.projectId)).limit(1);
+  if (!project) return;
+  const [change] = await db.select({ id: schema.events.id, payload: schema.events.payload }).from(schema.events)
+    .where(and(eq(schema.events.type, "repo_changed"), sql`${schema.events.payload}->>'scanId' = ${scan.id}`)).limit(1);
+  if (!change) return;
+  const [already] = await db.select({ id: schema.notifications.id }).from(schema.notifications).where(eq(schema.notifications.scanId, scan.id)).limit(1);
+  if (already) return;
+
+  const repo = project.repoFullName ?? project.name;
+  const sha = (scan.commitSha ?? (change.payload as { to?: string }).to ?? "").slice(0, 7);
+  if (scan.status !== "done") {
+    await notify(project.userId, { type: "rescan_failed", title: `New commit on ${repo}, but the re-scan failed`, body: scan.error ?? "We will try again on the next check.", href: `/scan/${scan.id}`, projectId: project.id, scanId: scan.id });
+    return;
+  }
+  const [prev] = await db.select().from(schema.scans)
+    .where(and(eq(schema.scans.projectId, project.id), eq(schema.scans.status, "done"), sql`${schema.scans.id} <> ${scan.id}`, sql`${schema.scans.createdAt} < ${scan.createdAt}`))
+    .orderBy(desc(schema.scans.createdAt)).limit(1);
+  const oldIds = prev ? gapIds(prev) : new Set<string>();
+  const gaps = Array.isArray(scan.gaps) ? (scan.gaps as Gap[]) : [];
+  const added = gaps.filter((g) => !oldIds.has(g.id));
+  const newIds = new Set(gaps.map((g) => g.id));
+  const removed = [...oldIds].filter((id) => !newIds.has(id)).length;
+  const title = added.length
+    ? `New commit ${sha} on ${repo}: ${added.length} new gap${added.length === 1 ? "" : "s"}${removed ? `, ${removed} fixed` : ""}`
+    : removed
+      ? `New commit ${sha} on ${repo}: ${removed} gap${removed === 1 ? "" : "s"} fixed, nothing new`
+      : `New commit ${sha} on ${repo}: no change to your privacy gaps`;
+  const body = added.length
+    ? added.slice(0, 3).map((g) => `${g.severity.toUpperCase()}: ${g.title}`).join("\n") + (added.length > 3 ? `\n+${added.length - 3} more` : "")
+    : `${gaps.length} gap${gaps.length === 1 ? "" : "s"} in total. Your published policy, if any, still matches.`;
+  await notify(project.userId, { type: added.length ? "new_gaps" : "rescan_clean", title, body, href: `/scan/${scan.id}`, projectId: project.id, scanId: scan.id });
 }
 
 /** Schedule work after the response is sent (Vercel waitUntil via next/server `after`); falls back to fire-and-forget. */
@@ -129,13 +176,20 @@ export async function afterScan(scanId: string): Promise<void> {
   const [user] = await db.select().from(schema.users).where(eq(schema.users.id, project.userId)).limit(1);
   if (!user?.isPro) return;
 
-  await requestReview({
+  const result = await requestReview({
     scan,
     project,
     userId: user.id,
     action: "update_policy",
     extraInputs: { previous_policy_md: approved.policyMd, new_gaps: newGaps, removed_gaps: removedGaps },
   });
+  await notify(user.id, {
+    type: "policy_update_pending",
+    title: `Policy update drafted for ${project.repoFullName ?? project.name}`,
+    body: `${newGaps.length} new gap${newGaps.length === 1 ? "" : "s"} changed what your policy must say. The reviewer agent drafted the update; it goes live after human approval. Your widget shows "review pending" until then.`,
+    href: `/scan/${scan.id}`, projectId: project.id, scanId: scan.id,
+  });
+  void result;
 }
 
 export async function lastScanFor(projectId: string): Promise<Scan | null> {

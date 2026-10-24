@@ -1,0 +1,20 @@
+.live { display: grid; gap: 14px; margin-top: 16px; }
+.live-hero { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center; }
+.live-big { font-size: 96px; font-weight: 800; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.live-target { font-size: 28px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+.live-bar { height: 10px; background: var(--panel-2, #eef0f4); border-radius: 999px; overflow: hidden; margin-top: 12px; }
+.live-bar i { display: block; height: 100%; background: var(--accent); transition: width .6s ease; }
+.live-side { display: grid; gap: 10px; margin: 0; min-width: 160px; }
+.live-side div { display: flex; justify-content: space-between; gap: 16px; border-top: 1px solid var(--line); padding-top: 8px; }
+.live-side dt { color: var(--muted); font-size: 13px; } .live-side dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+.live-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.live-grid .muted { font-size: 13px; } .live-num { font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.live-two { display: grid; grid-template-columns: 1.3fr 1fr; gap: 10px; }
+.live-chart { display: flex; align-items: flex-end; gap: 6px; height: 160px; padding-top: 18px; }
+.live-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 0; }
+.live-col i { display: block; width: 100%; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 3px; }
+.live-val { font-size: 12px; font-variant-numeric: tabular-nums; margin-bottom: 4px; }
+.live-lbl { font-size: 10px; color: var(--muted); margin-top: 4px; white-space: nowrap; }
+.live-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.live-list li { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); padding-top: 6px; font-size: 14px; }
+@media (max-width: 720px) { .live-hero, .live-two { grid-template-columns: 1fr; } .live-big { font-size: 64px; } }

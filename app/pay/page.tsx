@@ -41,7 +41,7 @@ const ERRORS: Record<string, string> = {
 
 const INCLUDES: Record<PaidPlan, string[]> = {
   single: ["How to fix every gap in this report", "Full privacy policy and terms draft", "Copy and download", "Read-only database check for this report"],
-  monthly: ["Everything in Single report, on every report", "Publish a hosted policy page and widget, reviewed by a human", "Agent re-check and policy update on every push", "30 days from today"],
+  monthly: ["Everything in Single report, on every report", "Publish a hosted policy page and widget, reviewed by a human", "Drift Watch agent: re-check, notification and policy update on every push", "30 days from today"],
 };
 
 export default async function Pay({ searchParams }: { searchParams: Promise<{ plan?: string; scan?: string; error?: string }> }) {

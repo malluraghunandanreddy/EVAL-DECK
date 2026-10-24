@@ -17,7 +17,7 @@ const ROWS: { label: string; free: Cell; single: Cell; monthly: Cell }[] = [
   { label: "Copy and download the policy", free: false, single: true, monthly: true },
   { label: "Publish with the policy widget (human reviewed)", free: false, single: false, monthly: true },
   { label: "Read-only live database check (coming soon)", free: false, single: "For that report", monthly: "Every report" },
-  { label: "Agent re-check and policy update on every push", free: false, single: false, monthly: true },
+  { label: "Drift Watch agent: re-check, notification and policy update on every push", free: false, single: false, monthly: true },
 ];
 
 function show(c: Cell) {
@@ -94,7 +94,7 @@ export default async function Pricing({ searchParams }: { searchParams: Promise<
               <li>Fixes and full policy on all reports</li>
               <li>Publish a hosted policy page and embeddable widget</li>
               <li>Database check on every report</li>
-              <li>Agent re-check and policy update on every push</li>
+              <li>Drift Watch agent checks every 5 minutes and notifies you on every push that changes a gap</li>
             </ul>
             {proAction()}
           </section>

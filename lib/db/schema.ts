@@ -100,7 +100,23 @@ export const orders = pgTable("orders", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// In-app notifications written by the Drift Watch agent (new commit, new gaps, policy draft ready).
+export const notifications = pgTable("notifications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
+  projectId: uuid("project_id"),
+  scanId: uuid("scan_id"),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  body: text("body"),
+  href: text("href"),
+  emailedAt: timestamp("emailed_at", { withTimezone: true }),
+  readAt: timestamp("read_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type User = typeof users.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;
 export type Project = typeof projects.$inferSelect;
 export type Scan = typeof scans.$inferSelect;
 export type PolicyVersion = typeof policyVersions.$inferSelect;

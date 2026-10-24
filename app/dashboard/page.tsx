@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getUser } from "@/lib/session";
 import { interestedPlans } from "@/lib/interest";
@@ -12,6 +12,14 @@ export const metadata = { title: "Your audits · TriLens" };
 const STATUS_LABEL: Record<string, string> = { queued: "Queued", running: "Running", done: "Ready", failed: "Failed" };
 
 const fmt = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false });
+
+async function markAllRead() {
+  "use server";
+  const user = await getUser();
+  if (!user) redirect("/signin?next=/dashboard");
+  await db.update(schema.notifications).set({ readAt: new Date() }).where(and(eq(schema.notifications.userId, user.id), isNull(schema.notifications.readAt)));
+  redirect("/dashboard");
+}
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ upgraded?: string }> }) {
   const user = await getUser();
@@ -29,6 +37,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         .limit(100)
     : [];
   const interested = user.isPro ? new Set() : await interestedPlans(user.id);
+  const notes = await db.select().from(schema.notifications).where(eq(schema.notifications.userId, user.id)).orderBy(desc(schema.notifications.createdAt)).limit(10);
+  const unread = notes.filter((n) => !n.readAt).length;
   const ready = scans.filter((s) => s.status === "done").length;
 
   return (
@@ -66,6 +76,30 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               <a className="btn" href="/pricing">See paid plans</a>
             )}
           </aside>
+        )}
+
+        <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
+          <h2 className="sec">Activity {unread > 0 && <span className="plan-chip pro" style={{ marginLeft: 8 }}>{unread} new</span>}</h2>
+          {unread > 0 && <form action={markAllRead}><button className="btn secondary sm" type="submit">Mark all read</button></form>}
+        </div>
+        {notes.length === 0 ? (
+          <p className="muted" style={{ marginTop: 0 }}>
+            {user.isPro
+              ? "The Drift Watch agent checks your repos every 5 minutes. When a commit changes your privacy gaps, it shows up here" + (user.email ? " and in your inbox." : ".")
+              : "On Pro monthly the Drift Watch agent checks your repos every 5 minutes and tells you here when a commit changes your privacy gaps."}
+          </p>
+        ) : (
+          <ul className="notes">
+            {notes.map((n) => (
+              <li key={n.id} className={n.readAt ? "" : "unread"}>
+                <div>
+                  <a href={n.href ?? "/dashboard"}><strong>{n.title}</strong></a>
+                  {n.body && <p className="muted" style={{ margin: "4px 0 0", whiteSpace: "pre-line", fontSize: 13 }}>{n.body}</p>}
+                </div>
+                <span className="muted" style={{ fontSize: 12, whiteSpace: "nowrap" }}>{fmt.format(n.createdAt)}</span>
+              </li>
+            ))}
+          </ul>
         )}
 
         <h2 className="sec">History</h2>
