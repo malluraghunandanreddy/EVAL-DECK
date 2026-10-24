@@ -8,6 +8,8 @@ export const users = pgTable("users", {
   githubTokenEnc: text("github_token_enc"),
   privateRepoAccess: boolean("private_repo_access").notNull().default(false),
   isPro: boolean("is_pro").notNull().default(false),
+  // Set by a paid Pro month. Null means Pro never expires (redeem codes, manual grants).
+  proUntil: timestamp("pro_until", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

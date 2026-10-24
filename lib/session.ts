@@ -43,5 +43,8 @@ export async function getUser() {
   const id = await getSessionUserId();
   if (!id) return null;
   const [user] = await db.select().from(schema.users).where(eq(schema.users.id, id)).limit(1);
-  return user ?? null;
+  if (!user) return null;
+  // A paid month that has run out is treated as free. Nothing is written; renewing sets a new date.
+  if (user.isPro && user.proUntil && user.proUntil.getTime() < Date.now()) return { ...user, isPro: false };
+  return user;
 }

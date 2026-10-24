@@ -27,6 +27,7 @@ Import the repo in Vercel, add every variable from `.env.example` under Project 
 - Landing page: `public/landing.html` (single file, edit the `CONFIG` block at the bottom). Shown at `/`.
 - Shared look: `app/globals.css` (tokens match the landing page). Header: `app/components/SiteHeader.tsx`.
 - Sign-in: `/signin` (GitHub, or email fallback). Pricing and "I'm interested": `/pricing`, `POST /api/interest`.
+- Pro monthly: the pay button appears when `PINELABS_CLIENT_ID` and `PINELABS_CLIENT_SECRET` are set. A paid order sets `users.pro_until` to 30 days out (run `npm run db:push` once for the new column). Single report is interest-only until a per-report unlock exists.
 - Plans and prices shown on the site: `lib/plans.ts` (single report Rs 50, Pro monthly Rs 499 is a placeholder).
 - Hackathon proof: `/admin/proof` shows the funnel (signed in, set up, got a report, interested, paid) and the interested list; `/admin/interest.csv` exports it.
 - Terms and privacy: `/terms`, `/privacy` (beta drafts, set `CONTACT_EMAIL` to show a contact line).

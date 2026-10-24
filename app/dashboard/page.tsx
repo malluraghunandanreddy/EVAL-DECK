@@ -41,7 +41,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             <h1>Your audits</h1>
           </div>
           <div className="row">
-            <span className={`plan-chip${user.isPro ? " pro" : ""}`}>{user.isPro ? "Pro" : "Free plan"}</span>
+            <span className={`plan-chip${user.isPro ? " pro" : ""}`}>{user.isPro ? (user.proUntil ? `Pro until ${new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short" }).format(user.proUntil)}` : "Pro") : "Free plan"}</span>
             <a className="btn" href="/onboarding">New audit</a>
           </div>
         </div>

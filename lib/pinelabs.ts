@@ -30,6 +30,8 @@ export const PINELABS_GET_ORDER_PATH = (orderId: string) => `/api/pay/v1/orders/
 // TODO confirm with the Pine Labs help desk that value is paise, not rupees, before going live.
 export const PRO_PRICE_PAISE = 49900;
 export const PRO_CURRENCY = "INR";
+// A paid order buys one month of Pro.
+export const PRO_PERIOD_DAYS = 30;
 
 // Order statuses that mean "money captured". UNCONFIRMED exact casing/values; PROCESSED is the documented success state.
 export const PINELABS_PAID_STATUSES = new Set(["PROCESSED", "CAPTURED", "SUCCESS", "AUTHORIZED"]);
@@ -238,7 +240,9 @@ export async function settleOrder(ref: { pinelabsOrderId?: string | null; mercha
     .returning({ id: schema.orders.id });
   if (flipped.length === 0) return { ok: true, upgraded: false, userId: order.userId };
 
-  await db.update(schema.users).set({ isPro: true }).where(eq(schema.users.id, order.userId));
+  await db.update(schema.users)
+    .set({ isPro: true, proUntil: new Date(Date.now() + PRO_PERIOD_DAYS * 86_400_000) })
+    .where(eq(schema.users.id, order.userId));
   await logEvent("payment", order.userId, {
     method: "pinelabs",
     source,
