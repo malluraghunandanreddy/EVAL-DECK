@@ -1,0 +1,17 @@
+name: Drift Watch agent
+# Pings the TriLens watcher every 5 minutes. It checks watched repos for new commits, re-scans,
+# notifies owners and hands new gaps to the AgenticOrg reviewer. Needs repo secret TRILENS_CRON_SECRET
+# equal to the CRON_SECRET env var on Vercel.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Run watcher
+        run: |
+          curl -fsS --max-time 300 -H "Authorization: Bearer ${{ secrets.TRILENS_CRON_SECRET }}" \
+            "https://trilens-lac.vercel.app/api/cron/watch"
