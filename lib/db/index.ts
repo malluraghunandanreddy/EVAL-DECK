@@ -6,7 +6,11 @@ import * as schema from "./schema";
 const globalForDb = globalThis as unknown as { pg?: ReturnType<typeof postgres> };
 const client =
   globalForDb.pg ??
-  postgres(process.env.DATABASE_URL ?? "postgres://localhost:5432/policydrift", { prepare: false, max: 5 });
+  postgres(process.env.DATABASE_URL ?? "postgres://localhost:5432/policydrift", {
+    // Supabase free-tier pooler: 15 server connections shared by every Vercel instance. Keep 2 per
+    // instance, drop idle ones after 20 s; extra queries queue inside postgres-js.
+    prepare: false, max: 2, idle_timeout: 5, max_lifetime: 300, connect_timeout: 10,
+  });
 if (process.env.NODE_ENV !== "production") globalForDb.pg = client;
 
 export const db = drizzle(client, { schema });

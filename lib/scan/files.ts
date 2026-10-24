@@ -4,6 +4,8 @@ import { join, relative, sep } from "node:path";
 export const SKIP_DIRS = new Set([
   "node_modules", "dist", "build", ".git", ".next", "out", "coverage", "vendor", "__pycache__", ".venv", "venv",
   ".turbo", ".vercel", ".cache", "target", ".idea", ".vscode", "bower_components",
+  // test material is not a production data flow and is full of fake PII (fixtures, mocks, sample rows)
+  "fixtures", "__fixtures__", "__mocks__", "mocks", "__tests__", "test", "tests", "spec", "e2e", "cypress", ".storybook", "storybook",
 ]);
 const LOCKFILES = new Set(["package-lock.json", "yarn.lock", "pnpm-lock.yaml", "bun.lockb", "poetry.lock", "Pipfile.lock", "Cargo.lock", "composer.lock"]);
 const TEXT_EXT = /\.(m?[jt]sx?|cjs|py|prisma|sql|json|toml|txt|md|html?|vue|svelte|ya?ml|cfg|ini|env[\w.-]*)$/i;

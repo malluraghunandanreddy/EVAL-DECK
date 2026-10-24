@@ -1,8 +1,23 @@
 import LegalPage from "../components/LegalPage";
+import SiteHeader from "../components/SiteHeader";
+import { HostedDoc, loadHosted } from "@/lib/policy/hosted";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Privacy · TriLens" };
 
-export default function Privacy() {
+export default async function Privacy() {
+  // Dogfooding: when OWN_SITE_ID points at TriLens' own published site, serve the approved TriLens-generated document.
+  const own = process.env.OWN_SITE_ID;
+  const hosted = own ? await loadHosted(own).catch(() => null) : null;
+  if (hosted?.version) {
+    return (
+      <>
+        <SiteHeader />
+        <HostedDoc kind="policy" siteId={hosted.site.id} siteName={hosted.site.name} md={hosted.version.policyMd} approvedAt={hosted.version.approvedAt} outOfDate={hosted.site.outOfDate} />
+      </>
+    );
+  }
   return (
     <LegalPage title="Privacy policy" updated="24 October 2026">
       <h2>What we collect</h2>

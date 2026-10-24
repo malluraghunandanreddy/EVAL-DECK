@@ -1,8 +1,23 @@
 import LegalPage from "../components/LegalPage";
+import SiteHeader from "../components/SiteHeader";
+import { HostedDoc, loadHosted } from "@/lib/policy/hosted";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Terms · TriLens" };
 
-export default function Terms() {
+export default async function Terms() {
+  // Dogfooding: when OWN_SITE_ID points at TriLens' own published site, serve the approved TriLens-generated document.
+  const own = process.env.OWN_SITE_ID;
+  const hosted = own ? await loadHosted(own).catch(() => null) : null;
+  if (hosted?.version) {
+    return (
+      <>
+        <SiteHeader />
+        <HostedDoc kind="terms" siteId={hosted.site.id} siteName={hosted.site.name} md={hosted.version.termsMd} approvedAt={hosted.version.approvedAt} outOfDate={hosted.site.outOfDate} />
+      </>
+    );
+  }
   return (
     <LegalPage title="Terms of use" updated="24 October 2026">
       <h2>What TriLens is</h2>
