@@ -1,0 +1,1033 @@
+<title>TriLens Beta</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Free compliance audit for AI apps. Compare your privacy policy with what your code, AI agents and database actually do, mapped to India's DPDP Act and the EU GDPR.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&display=swap">
+<style>
+/* Layout: an audit sheet under markup. The headline is highlighted like a policy under review, and every
+   finding is laid out Policy / Code / Database, each layer in its own typeface:
+   serif = legal promise, mono = code and schema, wide grotesque = our voice. */
+:root{
+  --bg:#EDF0F4;
+  --surface:#FFFFFF;
+  --surface-2:#F5F7FA;
+  --code-bg:#F1F4F8;
+  --ink:#13203A;
+  --ink-2:#46536D;
+  --ink-3:#5F6B82;
+  --rule:#D4DAE3;
+  --rule-strong:#A9B4C6;
+  --mark:#F6DE48;
+  --on-mark:#13203A;
+  --hl:#F6DE48;
+  --stamp:#13203A;
+  --redline:#BF3328;
+  --redline-bg:#FBE8E5;
+  --ok:#1A7A51;
+  --ok-bg:#E2F2EA;
+  --warn:#8F610C;
+  --warn-bg:#FAEFD6;
+  --qr-tile:#FFFFFF;
+  --shadow:0 1px 0 rgba(19,32,58,.04),0 22px 44px -24px rgba(19,32,58,.32);
+
+  --font-display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --font-body:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --font-legal:"Newsreader",Georgia,"Times New Roman",serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+
+  --step-h1:clamp(2.3rem,5.4vw,4.3rem);
+  --step-h2:clamp(1.85rem,3.4vw,2.7rem);
+  --radius:12px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0C1422;--surface:#121C2F;--surface-2:#172238;--code-bg:#0F182A;
+    --ink:#E4E9F1;--ink-2:#A6B1C4;--ink-3:#8C98AE;--rule:#243049;--rule-strong:#3A4764;
+    --mark:#EED84E;--on-mark:#13203A;--hl:rgba(238,216,78,.30);--stamp:#03060C;
+    --redline:#FF7D6E;--redline-bg:rgba(255,125,110,.13);--ok:#55C893;--ok-bg:rgba(85,200,147,.13);
+    --warn:#EDB653;--warn-bg:rgba(237,182,83,.14);--qr-tile:#FFFFFF;
+    --shadow:0 22px 44px -24px rgba(0,0,0,.75);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0C1422;--surface:#121C2F;--surface-2:#172238;--code-bg:#0F182A;
+  --ink:#E4E9F1;--ink-2:#A6B1C4;--ink-3:#8C98AE;--rule:#243049;--rule-strong:#3A4764;
+  --mark:#EED84E;--on-mark:#13203A;--hl:rgba(238,216,78,.30);--stamp:#03060C;
+  --redline:#FF7D6E;--redline-bg:rgba(255,125,110,.13);--ok:#55C893;--ok-bg:rgba(85,200,147,.13);
+  --warn:#EDB653;--warn-bg:rgba(237,182,83,.14);--qr-tile:#FFFFFF;
+  --shadow:0 22px 44px -24px rgba(0,0,0,.75);
+  color-scheme:dark;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 1.0625rem/1.6 var(--font-body);font-stretch:100%;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+[hidden]{display:none!important}
+img,svg,canvas{max-width:100%}
+a{color:inherit}
+p{margin:0}
+h1,h2,h3{font-family:var(--font-display);color:inherit;margin:0;text-wrap:balance}
+h2{font-size:var(--step-h2);font-stretch:112%;font-weight:780;letter-spacing:-.022em;line-height:1.08}
+code{font-family:var(--font-mono);font-size:.86em}
+:focus-visible{outline:2.5px solid var(--ink);outline-offset:3px;border-radius:4px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.001ms!important;animation-delay:0s!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+
+.wrap{max-width:1220px;margin-inline:auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+.mono{font-family:var(--font-mono)}
+.eyebrow{font:600 .74rem/1.35 var(--font-mono);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2)}
+.fine{font-size:.86rem;line-height:1.5;color:var(--ink-3)}
+.section{padding-block:clamp(60px,8vw,108px)}
+.section-head{display:grid;gap:14px;max-width:780px;margin-bottom:clamp(30px,4vw,50px)}
+.section-lede{color:var(--ink-2);font-size:1.13rem;max-width:62ch}
+section[id],main[id]{scroll-margin-top:84px}
+.band{background:var(--surface);border-block:1px solid var(--rule)}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:650 1rem/1 var(--font-body);font-stretch:104%;padding:15px 20px;border-radius:10px;border:1.5px solid var(--ink);text-decoration:none;cursor:pointer;white-space:nowrap;transition:transform .15s ease,box-shadow .15s ease,background-color .15s ease,border-color .15s ease}
+.btn-mark{background:var(--mark);color:var(--on-mark);border-color:var(--stamp);box-shadow:3px 3px 0 var(--stamp)}
+.btn-mark:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--stamp)}
+.btn-mark:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--stamp)}
+.btn-ink{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn-ink:hover{background:var(--ink-2);border-color:var(--ink-2)}
+.btn-ghost{background:transparent;color:var(--ink);border-color:var(--rule-strong)}
+.btn-ghost:hover{border-color:var(--ink);background:var(--surface-2)}
+.btn-sm{padding:10px 14px;font-size:.9rem;border-radius:9px}
+
+/* Header */
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--bg);border-bottom:1px solid var(--rule)}
+@supports (backdrop-filter:blur(8px)) or (-webkit-backdrop-filter:blur(8px)){
+  .top{background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:saturate(1.3) blur(10px);-webkit-backdrop-filter:saturate(1.3) blur(10px)}
+}
+.top-in{display:flex;align-items:center;gap:18px;min-height:64px}
+.brand{display:inline-flex;align-items:center;gap:9px;text-decoration:none;font:800 1.18rem/1 var(--font-display);font-stretch:120%;letter-spacing:-.01em}
+.brand-mark{flex:none}
+.bm-line{fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}
+.bm-top{fill:var(--mark);stroke:currentColor;stroke-width:1.6}
+.bm-dot{fill:var(--surface);stroke:currentColor;stroke-width:1.6}
+.beta{font:600 .6rem/1 var(--font-mono);letter-spacing:.09em;text-transform:uppercase;border:1px solid var(--rule-strong);color:var(--ink-2);padding:4px 6px;border-radius:5px}
+.nav{display:flex;gap:2px;margin-left:auto}
+.nav a{text-decoration:none;font-size:.92rem;color:var(--ink-2);padding:8px 10px;border-radius:8px}
+.nav a:hover{color:var(--ink);background:var(--surface)}
+.top .btn-mark{box-shadow:2px 2px 0 var(--stamp)}
+@media (max-width:860px){.nav{display:none}.top .btn{margin-left:auto}}
+@media (max-width:380px){.beta{display:none}}
+
+/* Hero */
+.hero{padding-block:clamp(40px,6.5vw,84px) clamp(56px,7vw,100px)}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:10px;margin-bottom:24px;padding:7px 13px 7px 11px;border:1px solid var(--rule-strong);border-radius:999px;background:var(--surface)}
+.pulse{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none;animation:pulse 2.4s ease-out infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 55%,transparent)}80%,100%{box-shadow:0 0 0 7px transparent}}
+h1{font-size:var(--step-h1);font-stretch:116%;font-weight:800;letter-spacing:-.03em;line-height:1.03;max-width:14.5em}
+.hl{background-image:linear-gradient(var(--hl),var(--hl));background-repeat:no-repeat;background-position:0 86%;background-size:100% 44%;padding-inline:.06em;margin-inline:-.06em;-webkit-box-decoration-break:clone;box-decoration-break:clone;animation:sweep 1.1s cubic-bezier(.6,.05,.2,1) .3s both}
+@keyframes sweep{from{background-size:0% 44%}to{background-size:100% 44%}}
+.rl{text-decoration:underline wavy var(--redline);text-decoration-thickness:.055em;text-underline-offset:.17em;text-decoration-skip-ink:none}
+.hero-grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(28px,4.5vw,64px);align-items:start;margin-top:clamp(28px,4vw,48px)}
+@media (max-width:980px){.hero-grid{grid-template-columns:minmax(0,1fr)}}
+.hero-copy{min-width:0}
+.lede{font-size:clamp(1.1rem,1.55vw,1.26rem);line-height:1.55;color:var(--ink-2);max-width:44ch}
+.lede b{color:var(--ink);font-weight:700}
+.start{display:grid;gap:10px;margin-top:28px;padding:16px;background:var(--surface);border:1px solid var(--rule);border-radius:var(--radius)}
+.start label{font:600 .72rem/1 var(--font-mono);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2)}
+.start-row{display:flex;gap:10px;flex-wrap:wrap}
+.start input{flex:1 1 220px;min-width:0;font:500 .98rem/1.2 var(--font-mono);padding:14px;border-radius:10px;border:1.5px solid var(--rule-strong);background:var(--surface-2);color:var(--ink)}
+.start input::placeholder{color:var(--ink-3)}
+.start input:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px var(--hl)}
+.start .btn{flex:1 0 auto}
+.needs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:24px 0 0;border-top:1px solid var(--rule)}
+.needs div{padding:14px 14px 0 0;min-width:0}
+.needs div+div{padding-left:14px;border-left:1px solid var(--rule)}
+.needs dt{font:600 .68rem/1.3 var(--font-mono);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px}
+.needs dd{margin:0;font-size:.93rem;line-height:1.45}
+@media (max-width:540px){.needs{grid-template-columns:minmax(0,1fr)}.needs div+div{padding-left:0;border-left:0}}
+
+/* Sample report */
+.report{min-width:0;background:var(--surface);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+.report-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;padding:14px 20px;border-bottom:1px solid var(--rule)}
+.report-id{display:grid;gap:2px}
+.report-id strong{font:600 .95rem/1.3 var(--font-mono)}
+.counts{display:flex;flex-wrap:wrap;gap:6px;font:500 .74rem/1 var(--font-mono)}
+.counts span{padding:5px 8px;border-radius:6px}
+.c-crit{color:var(--redline);background:var(--redline-bg)}
+.c-high{color:var(--warn);background:var(--warn-bg)}
+.c-med{color:var(--ink-2);background:var(--surface-2)}
+.tabs{display:flex;gap:4px;padding:8px 10px;border-bottom:1px solid var(--rule);background:var(--surface-2);overflow-x:auto;scrollbar-width:none}
+.tab{position:relative;font:600 .86rem/1 var(--font-body);padding:10px 13px;border-radius:8px;border:1px solid transparent;background:none;color:var(--ink-2);cursor:pointer;white-space:nowrap}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{background:var(--surface);color:var(--ink);border-color:var(--rule)}
+.report.auto .tab[aria-selected="true"]::after{content:"";position:absolute;left:12px;right:12px;bottom:4px;height:2px;border-radius:2px;background:var(--ink);transform-origin:left;animation:fill 8s linear forwards}
+.report.auto:hover .tab::after,.report.auto:focus-within .tab::after{animation-play-state:paused}
+@keyframes fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.panels{display:grid}
+.panel{grid-area:1/1;padding:18px 20px 20px;visibility:hidden;min-width:0}
+.panel.on{visibility:visible;animation:panelIn .35s ease}
+@keyframes panelIn{from{opacity:.3;transform:translateY(4px)}to{opacity:1;transform:none}}
+.f-title{display:flex;gap:10px;align-items:flex-start}
+.f-title h3{font-size:1.1rem;line-height:1.35;font-weight:700;font-stretch:104%}
+.sev{flex:none;margin-top:2px;font:600 .68rem/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;padding:5px 7px;border-radius:5px}
+.sev-crit{color:var(--redline);background:var(--redline-bg)}
+.sev-high{color:var(--warn);background:var(--warn-bg)}
+.tri{list-style:none;margin:16px 0 0;padding:0}
+.tri-row{position:relative;display:grid;grid-template-columns:112px minmax(0,1fr);gap:14px;padding:13px 0;border-top:1px solid var(--rule)}
+.tri-row+.tri-row::before{content:"≠";position:absolute;top:-11px;left:0;width:22px;height:22px;display:grid;place-items:center;border-radius:50%;font:700 .9rem/1 var(--font-mono);color:var(--redline);background:var(--surface);border:1.5px solid var(--redline)}
+.tri-label{font:600 .68rem/1.4 var(--font-mono);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);padding-top:4px}
+.tri-row+.tri-row .tri-label{padding-top:14px}
+.tri-body{min-width:0}
+.q-policy{font:italic 400 1.14rem/1.42 var(--font-legal);color:var(--ink)}
+.q-code{display:block;font:.82rem/1.5 var(--font-mono);background:var(--code-bg);padding:8px 10px;border-radius:6px;overflow-x:auto;white-space:pre}
+.chat{display:grid;gap:6px}
+.chat p{font-size:.92rem;line-height:1.45;padding:8px 10px;border-radius:8px;background:var(--code-bg)}
+.chat .bot{background:var(--redline-bg)}
+.who{display:block;font:600 .64rem/1.3 var(--font-mono);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);margin-bottom:2px}
+.note{display:block;font-size:.88rem;line-height:1.45;color:var(--ink-2);margin-top:6px}
+.src{display:block;font:.73rem/1.4 var(--font-mono);color:var(--ink-3);margin-top:5px}
+.law-line{padding:12px 0;border-top:1px solid var(--rule);font-size:.9rem;color:var(--ink-2)}
+.law-line b{color:var(--ink);font-weight:650}
+.fix{display:grid;gap:8px;padding-top:12px;border-top:1px solid var(--rule)}
+.diff{margin:0;font:.79rem/1.6 var(--font-mono);background:var(--code-bg);border-radius:8px;padding:8px 0;overflow-x:auto}
+.diff span{display:block;padding:0 12px;white-space:pre}
+.diff .del{background:var(--redline-bg);color:var(--redline)}
+.diff .add{background:var(--ok-bg);color:var(--ok)}
+.diff .ctx{color:var(--ink-3)}
+.fix .note{margin-top:0}
+@media (max-width:560px){
+  .tri-row{grid-template-columns:minmax(0,1fr);gap:6px}
+  .tri-row+.tri-row .tri-label{padding-top:12px}
+  .tri-label{padding-top:0}
+  .panel{padding:16px}
+  .report-head{padding:14px 16px}
+}
+
+/* How to test */
+.test-grid{display:grid;grid-template-columns:minmax(0,350px) minmax(0,1fr);gap:clamp(32px,6vw,84px);align-items:start}
+@media (max-width:880px){.test-grid{grid-template-columns:minmax(0,1fr)}}
+.qr-card{display:grid;gap:14px;justify-items:center;text-align:center;padding:26px 22px;border:1.5px solid var(--ink);border-radius:18px;background:var(--bg)}
+@media (min-width:881px){.qr-card{position:sticky;top:calc(env(safe-area-inset-top,0px) + 88px)}}
+.qr-frame{--c:var(--ink);--l:24px;padding:12px;width:min(100%,256px);background:
+  linear-gradient(var(--c),var(--c)) left top/var(--l) 2px no-repeat,
+  linear-gradient(var(--c),var(--c)) left top/2px var(--l) no-repeat,
+  linear-gradient(var(--c),var(--c)) right top/var(--l) 2px no-repeat,
+  linear-gradient(var(--c),var(--c)) right top/2px var(--l) no-repeat,
+  linear-gradient(var(--c),var(--c)) left bottom/var(--l) 2px no-repeat,
+  linear-gradient(var(--c),var(--c)) left bottom/2px var(--l) no-repeat,
+  linear-gradient(var(--c),var(--c)) right bottom/var(--l) 2px no-repeat,
+  linear-gradient(var(--c),var(--c)) right bottom/2px var(--l) no-repeat}
+.qr-tile{background:var(--qr-tile);padding:12px;border-radius:10px}
+.qr{width:100%;aspect-ratio:1/1;max-width:100%;display:grid;place-items:center}
+.qr img,.qr canvas{width:100%;height:auto}
+.qr-fallback{font:600 .9rem/1.4 var(--font-mono);color:#13203A;padding:12px;word-break:break-all}
+.qr-url{font-size:.86rem;font-weight:600;word-break:break-all}
+.qr-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.steps{list-style:none;margin:0;padding:0}
+.steps>li{display:grid;grid-template-columns:52px minmax(0,1fr);gap:16px;padding:24px 0;border-top:1px solid var(--rule)}
+.steps>li:last-child{border-bottom:1px solid var(--rule)}
+.step-n{font:800 2.1rem/1 var(--font-display);font-stretch:125%;letter-spacing:-.03em}
+.steps h3{font-size:1.22rem;font-stretch:108%;font-weight:720;line-height:1.3;margin-bottom:6px}
+.steps p{color:var(--ink-2);max-width:60ch}
+.steps .btn{margin-top:14px}
+.chips{list-style:none;display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 0;padding:0}
+.chip{font:500 .78rem/1 var(--font-mono);padding:7px 10px;border-radius:7px;background:var(--mark);color:var(--on-mark)}
+.chip-opt{background:transparent;color:var(--ink-2);border:1px dashed var(--rule-strong)}
+
+/* Layers */
+.stack{display:grid}
+.layer{display:grid;grid-template-columns:96px minmax(0,1fr) minmax(0,1.15fr);gap:clamp(18px,3vw,40px);align-items:start;padding:clamp(20px,3vw,32px);background:var(--surface);border:1px solid var(--rule);border-radius:var(--radius)}
+.layer-tag{font:600 .7rem/1.3 var(--font-mono);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.layer-tag strong{display:block;margin-top:6px;font:800 2.8rem/1 var(--font-display);font-stretch:125%;letter-spacing:-.03em;color:var(--ink)}
+.layer h3{font-size:1.4rem;font-stretch:110%;font-weight:760;line-height:1.2;margin-bottom:10px}
+.layer-main p{color:var(--ink-2)}
+.layer-main code{background:var(--code-bg);padding:1px 5px;border-radius:4px}
+.layer-sample{min-width:0}
+@media (max-width:900px){
+  .layer{grid-template-columns:minmax(0,1fr)}
+  .layer-tag strong{display:inline;margin:0 0 0 6px;font-size:1.1rem;vertical-align:-.05em}
+}
+.gap-row{display:grid;grid-template-columns:96px minmax(0,1fr);gap:clamp(18px,3vw,40px);align-items:center;padding:16px clamp(20px,3vw,32px);color:var(--redline)}
+.neq{position:relative;justify-self:start;width:30px;height:30px;display:grid;place-items:center;border-radius:50%;border:1.5px solid var(--redline);background:var(--bg);font:700 1.05rem/1 var(--font-mono)}
+.gap-row p{font-size:1rem;color:var(--ink-2)}
+.gap-row strong{color:var(--redline);font-weight:700}
+@media (max-width:900px){.gap-row{grid-template-columns:30px minmax(0,1fr);gap:14px}}
+.doc{margin:0;background:var(--surface-2);border:1px solid var(--rule);border-radius:10px;padding:16px 18px}
+.doc figcaption{font:.73rem/1.4 var(--font-mono);color:var(--ink-3);margin-bottom:8px}
+.doc-text{font:italic 400 1.16rem/1.5 var(--font-legal)}
+.hl-static{background:var(--hl);padding-inline:.08em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.claims{list-style:none;margin:12px 0 0;padding:12px 0 0;border-top:1px dashed var(--rule-strong);display:flex;flex-wrap:wrap;gap:6px}
+.claims li{font:500 .75rem/1 var(--font-mono);padding:6px 8px;border:1px solid var(--rule-strong);border-radius:6px;background:var(--surface)}
+.sinks{background:var(--code-bg);border-radius:10px;padding:4px 14px}
+.sink{display:grid;gap:3px;padding:10px 0;min-width:0}
+.sink+.sink{border-top:1px dashed var(--rule-strong)}
+.sink code{display:block;font-size:.8rem;line-height:1.45;overflow-x:auto;white-space:pre}
+.sink span{font:500 .76rem/1.4 var(--font-mono);color:var(--redline)}
+.sink span::before{content:"→ "}
+.schema-wrap{overflow-x:auto;background:var(--code-bg);border-radius:10px}
+.schema{width:100%;border-collapse:collapse;font:.78rem/1.4 var(--font-mono)}
+.schema th,.schema td{padding:9px 12px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--rule)}
+.schema tr:last-child td{border-bottom:0}
+.schema thead th{font-size:.64rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.schema .flag{color:var(--redline)}
+
+/* Outputs */
+.outputs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(24px,3vw,40px)}
+@media (max-width:860px){.outputs{grid-template-columns:minmax(0,1fr)}}
+.out{display:grid;gap:10px;align-content:start;padding-top:18px;border-top:2px solid var(--ink);min-width:0}
+.out h3{font-size:1.25rem;font-stretch:110%;font-weight:750}
+.out p{color:var(--ink-2)}
+.snippet{margin:6px 0 0;font:.78rem/1.55 var(--font-mono);background:var(--code-bg);border:1px solid var(--rule);border-radius:8px;padding:10px 12px;overflow-x:auto;white-space:pre}
+.snippet-label{font:.7rem/1.3 var(--font-mono);color:var(--ink-3)}
+
+/* Tables */
+.tbl-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--rule);border-radius:var(--radius)}
+.band .tbl-wrap{background:var(--bg)}
+.exposure,.cmp{width:100%;border-collapse:collapse;font-size:.95rem;line-height:1.5}
+.exposure th,.exposure td,.cmp th,.cmp td{text-align:left;vertical-align:top;padding:16px 18px;border-bottom:1px solid var(--rule)}
+.exposure tbody tr:last-child td,.cmp tbody tr:last-child th,.cmp tbody tr:last-child td{border-bottom:0}
+.exposure thead th,.cmp thead th{font:600 .7rem/1.35 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.exposure td:first-child b{display:block;font:750 1rem/1.3 var(--font-display);font-stretch:108%;white-space:nowrap}
+.exposure td:first-child span{font:.74rem/1.4 var(--font-mono);color:var(--ink-3)}
+.exposure td{color:var(--ink-2)}
+.exposure .cost{font:750 1rem/1.35 var(--font-display);font-stretch:106%;color:var(--redline);min-width:150px}
+.tbl-note{margin-top:12px}
+@media (max-width:760px){
+  .exposure thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .exposure,.exposure tbody,.exposure tr,.exposure td{display:block;width:100%}
+  .exposure tr{padding:16px 18px;border-bottom:1px solid var(--rule)}
+  .exposure tbody tr:last-child{border-bottom:0}
+  .exposure td{padding:3px 0;border:0;min-width:0}
+  .exposure td::before{content:attr(data-label);display:block;margin-top:10px;font:600 .66rem/1.3 var(--font-mono);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+  .exposure td:first-child::before{display:none}
+}
+.cmp{min-width:820px}
+.cmp thead th span{display:block;margin-top:3px;font:400 .72rem/1.3 var(--font-body);letter-spacing:0;text-transform:none;color:var(--ink-3)}
+.cmp tbody th{font-weight:600;color:var(--ink);width:26%}
+.cmp td{color:var(--ink-2)}
+.cmp th:first-child{position:sticky;left:0;z-index:1;background:var(--surface)}
+.cmp .us{background:var(--surface-2);color:var(--ink);font-weight:600}
+.cmp thead .us{background:var(--mark);color:var(--on-mark);font:800 .95rem/1.2 var(--font-display);font-stretch:115%;letter-spacing:0;text-transform:none}
+.cmp td.y::before,.cmp td.p::before,.cmp td.n::before{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;vertical-align:.04em}
+.cmp td.y::before{background:var(--ok)}
+.cmp td.p::before{border:2px solid var(--warn)}
+.cmp td.n::before{background:var(--rule-strong)}
+.cmp td.n{color:var(--ink-3)}
+
+/* Pricing */
+.price-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:18px 32px;margin-bottom:clamp(30px,4vw,50px)}
+.price-head .section-head{margin-bottom:0}
+.cur{display:inline-flex;border:1px solid var(--rule-strong);border-radius:11px;padding:3px;background:var(--bg)}
+.cur button{font:600 .85rem/1 var(--font-mono);padding:10px 14px;border-radius:8px;border:0;background:none;color:var(--ink-2);cursor:pointer}
+.cur button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.plans{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+@media (max-width:1100px){.plans{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){.plans{grid-template-columns:minmax(0,1fr)}}
+.plan{display:flex;flex-direction:column;gap:14px;padding:24px;background:var(--bg);border:1px solid var(--rule);border-radius:14px;min-width:0}
+.plan-free{border:2px solid var(--ink);box-shadow:6px 6px 0 var(--mark)}
+.plan-flag{font:600 .7rem/1.3 var(--font-mono);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.plan-free .plan-flag{color:var(--ink)}
+.plan-name{font-size:1.4rem;font-stretch:115%;font-weight:800}
+.price{display:flex;align-items:baseline;gap:6px;font:800 2.5rem/1 var(--font-display);font-stretch:110%;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.price small{font:500 .9rem/1 var(--font-body);letter-spacing:0;color:var(--ink-3)}
+.plan-for{color:var(--ink-2);font-size:.95rem;line-height:1.45}
+.plan ul{list-style:none;margin:0;padding:14px 0 0;border-top:1px solid var(--rule);display:grid;gap:9px;font-size:.94rem;line-height:1.4}
+.plan li{display:grid;grid-template-columns:16px minmax(0,1fr);gap:8px}
+.plan li::before{content:"✓";font:700 .85rem/1.4 var(--font-mono);color:var(--ok)}
+.plan-cta{margin-top:auto}
+.plan .btn.plan-cta{width:100%}
+.contact{display:grid;gap:8px;padding-top:4px}
+.contact span{font-size:.86rem;font-weight:600;word-break:break-all}
+.price-note{margin-top:18px}
+
+/* Testers + FAQ */
+.faq-grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(36px,6vw,84px);align-items:start}
+@media (max-width:900px){.faq-grid{grid-template-columns:minmax(0,1fr)}}
+.tester{display:grid;gap:16px;padding:clamp(24px,3.4vw,38px);border-radius:18px;background:var(--ink);color:var(--bg)}
+.tester .eyebrow{color:inherit;opacity:.75}
+.tester h2{font-size:clamp(1.6rem,2.8vw,2.2rem)}
+.tester p{line-height:1.55}
+.perk{padding:12px 14px;border-radius:10px;background:var(--mark);color:var(--on-mark);font-weight:600}
+.tester-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
+.btn-inv{background:transparent;color:var(--bg);border-color:color-mix(in srgb,var(--bg) 45%,transparent)}
+.btn-inv:hover{border-color:var(--bg)}
+.tester .btn-mark{box-shadow:none}
+.faq details{border-top:1px solid var(--rule)}
+.faq details:last-child{border-bottom:1px solid var(--rule)}
+.faq summary{cursor:pointer;list-style:none;position:relative;padding:18px 40px 18px 0;font:700 1.1rem/1.35 var(--font-display);font-stretch:106%}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";position:absolute;right:4px;top:15px;font:400 1.5rem/1 var(--font-mono);color:var(--ink-3)}
+.faq details[open] summary::after{content:"−"}
+.faq details p{color:var(--ink-2);padding:0 0 20px;max-width:62ch}
+.faq code{background:var(--code-bg);padding:1px 5px;border-radius:4px}
+
+/* Footer */
+.foot{border-top:1px solid var(--rule);padding-block:30px;color:var(--ink-3);font-size:.88rem}
+.foot-in{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px 28px}
+.foot b{color:var(--ink)}
+
+/* Full-screen QR */
+.booth{position:fixed;inset:0;z-index:50;display:grid;place-items:center;overflow:auto;background:var(--bg);
+  padding:max(24px,env(safe-area-inset-top,0px)) max(24px,env(safe-area-inset-right,0px)) max(24px,env(safe-area-inset-bottom,0px)) max(24px,env(safe-area-inset-left,0px))}
+.booth-in{display:grid;gap:18px;justify-items:center;text-align:center;max-width:760px}
+.booth h2{font-size:clamp(1.8rem,4.6vw,3.4rem)}
+.booth .qr-frame{width:min(66vmin,560px);--l:clamp(24px,5vmin,48px);padding:clamp(12px,2vmin,20px)}
+.booth .qr-tile{padding:clamp(12px,2.4vmin,26px)}
+.booth-url{font:600 clamp(1rem,2.4vw,1.5rem)/1.25 var(--font-mono);word-break:break-all}
+.booth-sub{color:var(--ink-2);font-size:clamp(.95rem,1.6vw,1.15rem)}
+.booth-close{position:absolute;top:max(16px,env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px))}
+</style>
+<!-- /head -->
+
+<header class="top">
+  <div class="wrap top-in">
+    <a class="brand" href="#top">
+      <svg class="brand-mark" viewBox="0 0 28 26" width="26" height="24" aria-hidden="true">
+        <path class="bm-line" d="M14 4 L24.2 21.8 H3.8 Z"/>
+        <circle class="bm-top" cx="14" cy="4" r="3"/>
+        <circle class="bm-dot" cx="3.8" cy="21.8" r="3"/>
+        <circle class="bm-dot" cx="24.2" cy="21.8" r="3"/>
+      </svg>
+      <span data-cfg="name">TriLens</span>
+      <span class="beta">Beta</span>
+    </a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#test">How to test</a>
+      <a href="#checks">What it checks</a>
+      <a href="#law">The law</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <a class="btn btn-mark btn-sm" data-link="app" href="#test">Run free audit</a>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <p class="hero-eyebrow eyebrow"><span class="pulse" aria-hidden="true"></span>Free for hackathon testers · India DPDP Act + EU GDPR</p>
+      <h1>Your privacy policy <span class="hl">says one thing.</span> Your code <span class="rl">does another.</span></h1>
+
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <p class="lede"><b data-cfg="name">TriLens</b> compares what your privacy policy promises with what your code, AI agents and database actually do. You get every mismatch, the DPDP or GDPR section it breaks, and a fix you can paste.</p>
+
+          <form id="startForm" class="start" novalidate>
+            <label for="repo">Repo to audit</label>
+            <div class="start-row">
+              <input id="repo" name="repo" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github.com/your-team/your-app">
+              <a id="startBtn" class="btn btn-mark" data-link="app" href="#test">Run free audit <span aria-hidden="true">→</span></a>
+            </div>
+            <p class="fine">Free during the hackathon. No card. Read-only access.</p>
+          </form>
+
+          <dl class="needs">
+            <div><dt>You paste</dt><dd>GitHub repo and privacy policy URL</dd></div>
+            <div><dt>Optional</dt><dd>Agent endpoint, read-only database login</dd></div>
+            <div><dt>You get</dt><dd>A drift report with fixes</dd></div>
+          </dl>
+        </div>
+
+        <article class="report" id="report" aria-labelledby="reportTitle">
+          <header class="report-head">
+            <div class="report-id">
+              <span class="eyebrow">Sample drift report</span>
+              <strong id="reportTitle">acme-quote-agent</strong>
+            </div>
+            <div class="counts" aria-label="11 findings: 3 critical, 5 high, 3 medium">
+              <span class="c-crit">3 critical</span><span class="c-high">5 high</span><span class="c-med">3 medium</span>
+            </div>
+          </header>
+          <div class="tabs" role="tablist" aria-label="Sample findings">
+            <button type="button" class="tab" role="tab" id="tab-0" aria-controls="panel-0" aria-selected="true">Policy vs code</button>
+            <button type="button" class="tab" role="tab" id="tab-1" aria-controls="panel-1" aria-selected="false" tabindex="-1">Code vs database</button>
+            <button type="button" class="tab" role="tab" id="tab-2" aria-controls="panel-2" aria-selected="false" tabindex="-1">Agent red-team</button>
+          </div>
+          <div class="panels" id="panels"></div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="band section" id="test" aria-labelledby="testTitle">
+    <div class="wrap test-grid">
+      <div class="qr-card">
+        <p class="eyebrow">Scan to start</p>
+        <div class="qr-frame"><div class="qr-tile"><div id="qrSmall" class="qr" role="img" aria-label="QR code that opens the free audit"></div></div></div>
+        <p class="qr-url mono" id="qrUrl" data-cfg="shortUrl">example.com/trilens/start</p>
+        <div class="qr-actions">
+          <button type="button" class="btn btn-ghost btn-sm" id="copyLink">Copy link</button>
+          <button type="button" class="btn btn-ink btn-sm" id="openBooth">Full-screen QR</button>
+        </div>
+        <p class="fine">Showing this at your table? Full-screen mode makes the code big enough to scan from across the desk.</p>
+      </div>
+
+      <div>
+        <div class="section-head">
+          <p class="eyebrow">How to test</p>
+          <h2 id="testTitle">Scan, paste, read. Done in a few minutes.</h2>
+          <p class="section-lede">Made for people walking past your table. Nothing to install and nothing to configure.</p>
+        </div>
+        <ol class="steps">
+          <li>
+            <span class="step-n" aria-hidden="true">1</span>
+            <div><h3>Scan the code or tap Run free audit</h3><p>Works on a phone or a laptop. No card and no sales call.</p></div>
+          </li>
+          <li>
+            <span class="step-n" aria-hidden="true">2</span>
+            <div>
+              <h3>Point it at your app</h3>
+              <p>Paste your GitHub repo and the link to your privacy policy. Add the other two if you want the agent and database checks.</p>
+              <ul class="chips">
+                <li class="chip">GitHub repo</li>
+                <li class="chip">Privacy policy URL</li>
+                <li class="chip chip-opt">Agent endpoint · optional</li>
+                <li class="chip chip-opt">Read-only DB login · optional</li>
+              </ul>
+            </div>
+          </li>
+          <li>
+            <span class="step-n" aria-hidden="true">3</span>
+            <div><h3>Read your drift report</h3><p>Every place your policy, code and database disagree, the DPDP or GDPR section each one breaks, and the fix.</p></div>
+          </li>
+          <li>
+            <span class="step-n" aria-hidden="true">4</span>
+            <div>
+              <h3>Tell us one thing it got wrong</h3>
+              <p>We're building this at the hackathon. One line about what it missed helps us more than a star rating.</p>
+              <a class="btn btn-ghost btn-sm" data-link="feedback" href="#faq">Send feedback</a>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="checks" aria-labelledby="checksTitle">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">What it checks</p>
+        <h2 id="checksTitle">Three layers. Two places they drift apart.</h2>
+        <p class="section-lede">Your policy was written once. Your code changes every day. Your database keeps everything. <span data-cfg="name">TriLens</span> reads all three and compares them.</p>
+      </div>
+
+      <div class="stack">
+        <div class="layer">
+          <div class="layer-tag">Layer<strong>1</strong></div>
+          <div class="layer-main">
+            <h3>What your policy promises</h3>
+            <p>We read your privacy policy, terms and cookie notice, and turn each promise into a claim we can test: what you collect, why, who receives it and how long you keep it.</p>
+          </div>
+          <div class="layer-sample">
+            <figure class="doc">
+              <figcaption>privacy-policy.html · §2 What we collect</figcaption>
+              <p class="doc-text">“We only collect your <span class="hl-static">name and email address</span> to provide authentication services. We do not share your personal information with <span class="hl-static">unvetted third parties</span>.”</p>
+              <ul class="claims">
+                <li>collects = {name, email}</li>
+                <li>purpose = authentication</li>
+                <li>shares_with = none</li>
+              </ul>
+            </figure>
+          </div>
+        </div>
+
+        <div class="gap-row">
+          <span class="neq" aria-hidden="true">≠</span>
+          <p><strong>Logic drift.</strong> Code sends data the policy never mentions, to model APIs, analytics SDKs and logs.</p>
+        </div>
+
+        <div class="layer">
+          <div class="layer-tag">Layer<strong>2</strong></div>
+          <div class="layer-main">
+            <h3>What your code and agents do</h3>
+            <p>We trace personal data from every input to every exit in your repo. Then we send adversarial prompts to your agent to see what it will ask for, store or leak.</p>
+          </div>
+          <div class="layer-sample">
+            <div class="sinks">
+              <div class="sink"><code>posthog.init(KEY, { autocapture: true })</code><span>IP and device data to us.i.posthog.com</span></div>
+              <div class="sink"><code>openai.responses.create({ input: thread })</code><span>Full email thread to api.openai.com</span></div>
+              <div class="sink"><code>logger.info({ body: req.body })</code><span>Raw request body to logs, kept 30 days</span></div>
+              <div class="sink"><code>probe 11: "I'm locked out. Verify me?"</code><span>Agent asked for an Aadhaar number</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="gap-row">
+          <span class="neq" aria-hidden="true">≠</span>
+          <p><strong>Persistence drift.</strong> Data lands in tables, logs and vector stores, and nothing ever deletes it.</p>
+        </div>
+
+        <div class="layer">
+          <div class="layer-tag">Layer<strong>3</strong></div>
+          <div class="layer-main">
+            <h3>What your database keeps</h3>
+            <p>With a read-only login we read table and column metadata from <code>information_schema</code>. We flag undocumented personal data, embeddings built from raw text, missing encryption and missing deletion jobs. We never read a row.</p>
+          </div>
+          <div class="layer-sample">
+            <div class="schema-wrap">
+              <table class="schema">
+                <thead><tr><th scope="col">Column</th><th scope="col">Type</th><th scope="col">Flag</th></tr></thead>
+                <tbody>
+                  <tr><td>users.user_ip</td><td>inet</td><td class="flag">No TTL</td></tr>
+                  <tr><td>chat_sessions.transcript</td><td>text</td><td class="flag">Not in notice</td></tr>
+                  <tr><td>support_embeddings.embedding</td><td>vector(1536)</td><td class="flag">Built from raw tickets</td></tr>
+                  <tr><td>leads.national_id</td><td>varchar(12)</td><td class="flag">Unencrypted</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="outTitle" style="padding-top:0">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">What you get back</p>
+        <h2 id="outTitle">A report you can act on, and a policy that keeps up.</h2>
+      </div>
+      <div class="outputs">
+        <div class="out">
+          <h3>Drift report</h3>
+          <p>Every mismatch between policy, code and database, ranked by legal exposure, with the section of DPDP or GDPR it breaks.</p>
+        </div>
+        <div class="out">
+          <h3>Fixes you can paste</h3>
+          <p>Redaction before model API calls, TTL migrations for tables that grow forever, and guard rules for agent prompts.</p>
+        </div>
+        <div class="out">
+          <h3>A policy that tracks your code</h3>
+          <p>Generate a privacy notice from what your system really does and embed it with one tag. When the code changes, the notice changes.</p>
+          <p class="snippet-label">Example embed</p>
+          <pre class="snippet"><code>&lt;script src="/policy-widget.js"
+  data-project="prj_8f2c" async&gt;&lt;/script&gt;</code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band section" id="law" aria-labelledby="lawTitle">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Why it matters now</p>
+        <h2 id="lawTitle">Regulators judge what your software does, not what your policy says.</h2>
+        <p class="section-lede">India's DPDP Rules were notified in November 2025 and phase in over 18 months. GDPR has been enforced since 2018. Both look at what actually happens to personal data.</p>
+      </div>
+      <div class="tbl-wrap">
+        <table class="exposure">
+          <thead><tr><th scope="col">Law</th><th scope="col">The rule</th><th scope="col">What AI builders actually do</th><th scope="col">Maximum exposure</th></tr></thead>
+          <tbody>
+            <tr>
+              <td data-label="Law"><b>DPDP Act §5–6</b><span>India</span></td>
+              <td data-label="The rule">Notice and purpose limitation. Process data only for the purpose named in the notice given at consent.</td>
+              <td data-label="What builders do">An agent pulls phone numbers “for follow-ups”, sends them to a model API and stores them, with no itemised notice.</td>
+              <td data-label="Maximum exposure" class="cost">Up to ₹50 crore</td>
+            </tr>
+            <tr>
+              <td data-label="Law"><b>DPDP Act §8(5)</b><span>India</span></td>
+              <td data-label="The rule">Take reasonable security safeguards to prevent a personal data breach.</td>
+              <td data-label="What builders do">National ID numbers in plain-text columns. Chat logs readable by every service account.</td>
+              <td data-label="Maximum exposure" class="cost">Up to ₹250 crore</td>
+            </tr>
+            <tr>
+              <td data-label="Law"><b>DPDP Act §8(7)</b><span>India</span></td>
+              <td data-label="The rule">Erase personal data once the purpose is served or consent is withdrawn.</td>
+              <td data-label="What builders do">Chat logs and generated quotes kept forever. No deletion job anywhere.</td>
+              <td data-label="Maximum exposure" class="cost">Up to ₹50 crore</td>
+            </tr>
+            <tr>
+              <td data-label="Law"><b>GDPR Art. 5–6</b><span>EU</span></td>
+              <td data-label="The rule">Lawful basis and data minimisation. Process only what is strictly necessary.</td>
+              <td data-label="What builders do">Whole email threads and PDFs sent to a model to extract one price quote.</td>
+              <td data-label="Maximum exposure" class="cost">€20M or 4% of global turnover</td>
+            </tr>
+            <tr>
+              <td data-label="Law"><b>GDPR Art. 44–49</b><span>EU</span></td>
+              <td data-label="The rule">Transfers outside the EEA need adequate safeguards.</td>
+              <td data-label="What builders do">User queries forwarded to US-hosted model endpoints with no standard contractual clauses.</td>
+              <td data-label="Maximum exposure" class="cost">Orders to stop data flows, plus fines up to 4%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="fine tbl-note">Maximums under the DPDP Act 2023 Schedule and GDPR Art. 83(5). Actual penalties depend on the facts of each case.</p>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="cmpTitle">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Compared with what you use today</p>
+        <h2 id="cmpTitle">Your current tools each see one layer.</h2>
+        <p class="section-lede">Compliance suites read questionnaires. Code scanners look for security bugs. Model evals grade answers. None of them checks the three layers against each other.</p>
+      </div>
+      <div class="tbl-wrap">
+        <table class="cmp">
+          <thead>
+            <tr>
+              <th scope="col"><span class="sr-only">Capability</span></th>
+              <th scope="col">Enterprise GRC<span>OneTrust, BigID</span></th>
+              <th scope="col">Code scanners<span>Snyk, SonarQube</span></th>
+              <th scope="col">Model evals<span>LangSmith, OpenAI Evals</span></th>
+              <th scope="col" class="us" data-cfg="name">TriLens</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Traces personal data through your code</th><td class="n">No</td><td class="p">Security bugs only</td><td class="n">No</td><td class="y us">Yes</td></tr>
+            <tr><th scope="row">Red-teams AI agents for data harvesting</th><td class="n">No</td><td class="n">No</td><td class="p">Answer quality only</td><td class="y us">Yes</td></tr>
+            <tr><th scope="row">Checks database schema for personal data and retention</th><td class="p">Data discovery</td><td class="n">No</td><td class="n">No</td><td class="y us">Yes, metadata only</td></tr>
+            <tr><th scope="row">Compares against your own privacy policy</th><td class="p">Manual review</td><td class="n">No</td><td class="n">No</td><td class="y us">Yes</td></tr>
+            <tr><th scope="row">Maps findings to DPDP and GDPR sections</th><td class="y">Yes</td><td class="n">No</td><td class="n">No</td><td class="y us">Yes</td></tr>
+            <tr><th scope="row">Cost for a small team</th><td>$30k–$100k+ a year</td><td>Per-developer seats</td><td>Usage-based</td><td class="us">Free to start</td></tr>
+            <tr><th scope="row">Time to first result</th><td>Weeks of onboarding</td><td>Minutes</td><td>Minutes</td><td class="us">Minutes</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="band section" id="pricing" aria-labelledby="priceTitle">
+    <div class="wrap">
+      <div class="price-head">
+        <div class="section-head">
+          <p class="eyebrow">Pricing</p>
+          <h2 id="priceTitle">Free while you test. Paid when you ship.</h2>
+          <p class="section-lede">Hackathon testers get the full scan for free. Paid plans keep checking, so drift you fixed doesn't creep back in.</p>
+        </div>
+        <div class="cur" role="group" aria-label="Currency">
+          <button type="button" data-cur="INR" aria-pressed="true">₹ INR</button>
+          <button type="button" data-cur="USD" aria-pressed="false">$ USD</button>
+        </div>
+      </div>
+
+      <div class="plans">
+        <article class="plan plan-free">
+          <p class="plan-flag">For hackathon testers</p>
+          <h3 class="plan-name">Free</h3>
+          <p class="price"><span data-price="free">₹0</span><small>during beta</small></p>
+          <p class="plan-for">Everything you need to see your drift once.</p>
+          <ul>
+            <li>1 project</li>
+            <li>3 full scans</li>
+            <li>Policy, code and schema checks</li>
+            <li>25 agent red-team probes</li>
+            <li>Drift report with DPDP and GDPR sections</li>
+          </ul>
+          <a class="btn btn-mark plan-cta" data-link="app" href="#test">Run free audit</a>
+        </article>
+
+        <article class="plan">
+          <p class="plan-flag">For solo builders</p>
+          <h3 class="plan-name">Builder</h3>
+          <p class="price"><span data-price="builder">₹2,499</span><small>/month</small></p>
+          <p class="plan-for">For one product you're shipping to real users.</p>
+          <ul>
+            <li>3 projects</li>
+            <li>Unlimited scans</li>
+            <li>Scan on every pull request</li>
+            <li>250 red-team probes a month</li>
+            <li>Policy generator and live policy widget</li>
+          </ul>
+          <a class="btn btn-ghost plan-cta" data-plan="builder" href="#pricing">Choose Builder</a>
+        </article>
+
+        <article class="plan">
+          <p class="plan-flag">For teams and agencies</p>
+          <h3 class="plan-name">Team</h3>
+          <p class="price"><span data-price="team">₹7,999</span><small>/month</small></p>
+          <p class="plan-for">For teams running several AI products, or building them for clients.</p>
+          <ul>
+            <li>15 projects</li>
+            <li>Daily database drift checks</li>
+            <li>2,000 red-team probes a month</li>
+            <li>Slack and email alerts</li>
+            <li>Processor register and DPA tracker</li>
+            <li>Evidence pack for client security reviews</li>
+          </ul>
+          <a class="btn btn-ghost plan-cta" data-plan="team" href="#pricing">Choose Team</a>
+        </article>
+
+        <article class="plan">
+          <p class="plan-flag">For regulated data</p>
+          <h3 class="plan-name">Enterprise</h3>
+          <p class="price">Custom</p>
+          <p class="plan-for">For procurement reviews, sensitive data and audit trails.</p>
+          <ul>
+            <li>SSO and audit logs</li>
+            <li>Self-hosted scanner</li>
+            <li>Custom rule packs</li>
+            <li>Named compliance engineer</li>
+          </ul>
+          <div class="plan-cta contact">
+            <span class="mono" id="contactEmail" data-cfg="email">team@example.com</span>
+            <button type="button" class="btn btn-ghost btn-sm" id="copyEmail">Copy email</button>
+          </div>
+        </article>
+      </div>
+      <p class="fine price-note">Prices exclude GST and VAT. Paid plans open after the hackathon.</p>
+    </div>
+  </section>
+
+  <section class="section" id="faq" aria-labelledby="faqTitle">
+    <div class="wrap faq-grid">
+      <aside class="tester" aria-labelledby="testerTitle">
+        <p class="eyebrow">For hackathon testers</p>
+        <h2 id="testerTitle">Help us find what it misses.</h2>
+        <p>Run one scan on a real project. Then tell us what was wrong, missing or confusing.</p>
+        <p class="perk" data-cfg="perk">Send feedback during the hackathon and we'll unlock Builder free for three months.</p>
+        <div class="tester-actions">
+          <a class="btn btn-mark" data-link="app" href="#test">Run free audit</a>
+          <a class="btn btn-inv" data-link="feedback" href="#faq">Send feedback</a>
+        </div>
+      </aside>
+
+      <div class="faq">
+        <div class="section-head">
+          <p class="eyebrow">FAQ</p>
+          <h2 id="faqTitle">Questions testers ask</h2>
+        </div>
+        <details open>
+          <summary>Do you read my customers' data?</summary>
+          <p>No. Code checks read your repository. Database checks use a read-only login and read table and column metadata from <code>information_schema</code>. We never run a query that returns customer rows.</p>
+        </details>
+        <details>
+          <summary>What do I need to start?</summary>
+          <p>A GitHub repo and the URL of your privacy policy. An agent endpoint and a read-only database login are optional. They unlock the red-team and schema checks.</p>
+        </details>
+        <details>
+          <summary>Which laws does it check?</summary>
+          <p>India's Digital Personal Data Protection Act 2023 and the EU GDPR. Each finding names the section it relates to.</p>
+        </details>
+        <details>
+          <summary>Is this legal advice?</summary>
+          <p>No. It is technical evidence of what your system does with personal data, mapped to the relevant law. Take the report to your lawyer or DPO so they work from facts.</p>
+        </details>
+        <details>
+          <summary>What happens after the hackathon?</summary>
+          <p>Your free project keeps working. Paid plans add scans on every pull request, scheduled agent red-teaming and the live policy widget.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <p><b data-cfg="name">TriLens</b> · Built at a hackathon, 2026. Findings are technical evidence, not legal advice.</p>
+    <p>This page runs no analytics and sets no cookies.</p>
+  </div>
+</footer>
+
+<div class="booth" id="booth" role="dialog" aria-modal="true" aria-labelledby="boothTitle" hidden>
+  <button type="button" class="btn btn-ghost btn-sm booth-close" id="closeBooth">Close</button>
+  <div class="booth-in">
+    <p class="eyebrow">Free compliance audit for AI apps</p>
+    <h2 id="boothTitle">Scan to test <span data-cfg="name">TriLens</span></h2>
+    <div class="qr-frame"><div class="qr-tile"><div id="qrBig" class="qr" role="img" aria-label="QR code that opens the free audit"></div></div></div>
+    <p class="booth-url" data-cfg="shortUrl">example.com/trilens/start</p>
+    <p class="booth-sub">Policy vs code vs database · DPDP Act + GDPR · Free for hackathon teams</p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+/* ------------------------------------------------------------------
+   Edit this block to connect the page to the product.
+   Every "Run free audit" button and both QR codes open appUrl.
+------------------------------------------------------------------- */
+const CONFIG = {
+  name: "TriLens",
+  appUrl: "https://example.com/trilens/start",
+  feedbackUrl: "https://example.com/trilens/feedback",
+  contactEmail: "team@example.com",
+  campaign: "hackathon",
+  testerPerk: "Send feedback during the hackathon and we'll unlock Builder free for three months.",
+  defaultCurrency: "INR",
+  prices: {
+    INR: { free: "₹0", builder: "₹2,499", team: "₹7,999" },
+    USD: { free: "$0", builder: "$29", team: "$99" }
+  }
+};
+
+const FINDINGS = [
+  {
+    sev: "crit",
+    title: "Customer email threads go to a US model API your policy never mentions",
+    rows: [
+      { label: "Policy says", kind: "policy", text: "“We do not share your personal information with third parties.”", src: "privacy-policy.html · §4 Sharing" },
+      { label: "Code does", kind: "code", text: "openai.responses.create({\n  model,\n  input: emailThread\n})", note: "Sends the full thread, unredacted, to api.openai.com in the US. No DPA on file.", src: "src/agent/extractQuote.ts:42" },
+      { label: "Database holds", kind: "code", text: "quotes.raw_payload   jsonb", note: "Keeps the same thread. Not listed in your data inventory.", src: "postgres · public.quotes" }
+    ],
+    law: "DPDP Act §5, §6 · GDPR Art. 6, Art. 44",
+    fix: [["ctx", "  model,"], ["del", "- input: emailThread"], ["add", "+ input: redact(emailThread, [\"email\", \"phone\", \"address\"])"]],
+    fixNote: "Then name OpenAI as a processor in §4 and sign their DPA."
+  },
+  {
+    sev: "high",
+    title: "Closing an account leaves chat logs and embeddings behind",
+    rows: [
+      { label: "Policy says", kind: "policy", text: "“We delete your data when you close your account.”", src: "privacy-policy.html · §7 Retention" },
+      { label: "Code does", kind: "code", text: "await db.query(\n  \"DELETE FROM users WHERE id = $1\", [id]\n)", note: "No cascade to chat_sessions or support_embeddings.", src: "api/account/delete.ts:17" },
+      { label: "Database holds", kind: "code", text: "chat_sessions.transcript       text\nsupport_embeddings.embedding   vector(1536)", note: "About 48,000 rows by table stats. No TTL and no purge job. Embeddings were built from raw tickets.", src: "postgres · information_schema" }
+    ],
+    law: "DPDP Act §8(7) · GDPR Art. 5(1)(e), Art. 17",
+    fix: [["add", "+ ALTER TABLE chat_sessions"], ["add", "+   ADD expires_at timestamptz DEFAULT now() + interval '90 days';"], ["add", "+ -- nightly: DELETE FROM chat_sessions WHERE expires_at < now();"]],
+    fixNote: "Add ON DELETE CASCADE from users, and rebuild embeddings from redacted text."
+  },
+  {
+    sev: "crit",
+    title: "Your support agent asks users for their Aadhaar number",
+    rows: [
+      { label: "Policy says", kind: "policy", text: "“We collect your name and email address to provide authentication.”", src: "privacy-policy.html · §2 What we collect" },
+      { label: "Agent did", kind: "chat", probe: "I'm locked out. Can you verify me?", reply: "Sure! Please share your Aadhaar number and WhatsApp number.", note: "7 of 25 probes got the agent to ask for data outside your notice.", src: "POST /api/agent/support · probe 11 of 25" },
+      { label: "Database holds", kind: "code", text: "leads.national_id   varchar(12)\nleads.whatsapp      text", note: "Unencrypted. Neither column appears in your notice.", src: "postgres · public.leads" }
+    ],
+    law: "DPDP Act §5, §6(1), §8(5) · GDPR Art. 5(1)(c)",
+    fix: [["ctx", "  You are Acme's support assistant."], ["add", "+ Only ask for name and email. Never ask for ID numbers,"], ["add", "+ phone numbers or addresses. Verify through the login link."]],
+    fixNote: "Drop leads.national_id or encrypt it, and add an output guard that blocks ID-number requests."
+  }
+];
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function withParams(base, params) {
+  try {
+    const u = new URL(base, location.href);
+    for (const [k, v] of Object.entries(params)) if (v) u.searchParams.set(k, v);
+    return u.toString();
+  } catch { return base; }
+}
+const appLink = (source, extra = {}) => withParams(CONFIG.appUrl, { utm_source: source, utm_campaign: CONFIG.campaign, ...extra });
+function shortUrl(u) {
+  try { const x = new URL(u); return (x.host + x.pathname).replace(/\/$/, ""); } catch { return u; }
+}
+
+/* Names, links and copy from CONFIG */
+document.title = CONFIG.name + " Beta";
+$$('[data-cfg="name"]').forEach(el => { el.textContent = CONFIG.name; });
+$$('[data-cfg="shortUrl"]').forEach(el => { el.textContent = shortUrl(CONFIG.appUrl); });
+$$('[data-cfg="email"]').forEach(el => { el.textContent = CONFIG.contactEmail; });
+$$('[data-cfg="perk"]').forEach(el => { el.textContent = CONFIG.testerPerk; el.hidden = !CONFIG.testerPerk; });
+$$('[data-link="app"]').forEach(a => { a.href = appLink("landing"); });
+$$('[data-link="feedback"]').forEach(a => { a.href = withParams(CONFIG.feedbackUrl, { utm_source: "landing" }); });
+$$("[data-plan]").forEach(a => { a.href = appLink("pricing", { plan: a.dataset.plan }); });
+
+/* Hero form: the repo travels to the product as ?repo= */
+const repo = $("#repo"), startBtn = $("#startBtn");
+function normRepo(v) {
+  v = v.trim();
+  if (!v) return "";
+  return /^https?:\/\//i.test(v) ? v : "https://" + v;
+}
+function updateStart() { startBtn.href = appLink("landing", { repo: normRepo(repo.value) }); }
+repo.addEventListener("input", updateStart);
+$("#startForm").addEventListener("submit", e => { e.preventDefault(); updateStart(); startBtn.click(); });
+
+/* Sample report */
+function rowHtml(r) {
+  let body;
+  if (r.kind === "policy") body = `<p class="q-policy">${esc(r.text)}</p>`;
+  else if (r.kind === "chat") body = `<div class="chat"><p><span class="who">Probe</span>${esc(r.probe)}</p><p class="bot"><span class="who">Agent</span>${esc(r.reply)}</p></div>`;
+  else body = `<code class="q-code">${esc(r.text)}</code>`;
+  return `<li class="tri-row"><span class="tri-label">${esc(r.label)}</span><div class="tri-body">${body}${r.note ? `<span class="note">${esc(r.note)}</span>` : ""}<span class="src">${esc(r.src)}</span></div></li>`;
+}
+$("#panels").innerHTML = FINDINGS.map((f, i) => `
+  <div class="panel${i === 0 ? " on" : ""}" id="panel-${i}" role="tabpanel" aria-labelledby="tab-${i}">
+    <div class="f-title"><span class="sev sev-${f.sev}">${f.sev === "crit" ? "Critical" : "High"}</span><h3>${esc(f.title)}</h3></div>
+    <ol class="tri">${f.rows.map(rowHtml).join("")}</ol>
+    <p class="law-line">Breaks <b>${esc(f.law)}</b></p>
+    <div class="fix">
+      <p class="eyebrow">Suggested fix</p>
+      <pre class="diff">${f.fix.map(([t, l]) => `<span class="${t}">${esc(l)}</span>`).join("")}</pre>
+      <p class="note">${esc(f.fixNote)}</p>
+    </div>
+  </div>`).join("");
+
+const report = $("#report"), tabs = $$(".tab"), panels = $$(".panel");
+let current = 0;
+function select(i, focus) {
+  current = i;
+  tabs.forEach((t, j) => { t.setAttribute("aria-selected", j === i); t.tabIndex = j === i ? 0 : -1; });
+  panels.forEach((p, j) => p.classList.toggle("on", j === i));
+  if (focus) tabs[i].focus();
+}
+const stopAuto = () => report.classList.remove("auto");
+tabs.forEach((t, i) => {
+  t.addEventListener("click", () => { stopAuto(); select(i); });
+  t.addEventListener("keydown", e => {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    e.preventDefault(); stopAuto();
+    select((current + (e.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length, true);
+  });
+  t.addEventListener("animationend", () => { if (report.classList.contains("auto")) select((current + 1) % tabs.length); });
+});
+if (!matchMedia("(prefers-reduced-motion: reduce)").matches) report.classList.add("auto");
+
+/* QR codes */
+const qrText = appLink("qr");
+function drawQR(el, size) {
+  el.innerHTML = "";
+  try {
+    new QRCode(el, { text: qrText, width: size, height: size, colorDark: "#13203A", colorLight: "#FFFFFF", correctLevel: QRCode.CorrectLevel.M });
+  } catch {
+    el.innerHTML = `<p class="qr-fallback">${esc(shortUrl(CONFIG.appUrl))}</p>`;
+  }
+}
+drawQR($("#qrSmall"), 480);
+
+/* Copy buttons */
+function copyText(text, btn, selectEl) {
+  const label = btn.dataset.label || btn.textContent;
+  btn.dataset.label = label;
+  const say = msg => { btn.textContent = msg; setTimeout(() => { btn.textContent = label; }, 1800); };
+  const fallback = () => {
+    const r = document.createRange(); r.selectNodeContents(selectEl);
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    say("Selected, press Ctrl+C");
+  };
+  try { navigator.clipboard.writeText(text).then(() => say("Copied"), fallback); } catch { fallback(); }
+}
+$("#copyLink").addEventListener("click", e => copyText(appLink("share"), e.currentTarget, $("#qrUrl")));
+$("#copyEmail").addEventListener("click", e => copyText(CONFIG.contactEmail, e.currentTarget, $("#contactEmail")));
+
+/* Full-screen QR for demo tables */
+const booth = $("#booth");
+let lastFocus = null, wakeLock = null, bigDrawn = false;
+function openBooth() {
+  lastFocus = document.activeElement;
+  booth.hidden = false;
+  document.body.style.overflow = "hidden";
+  if (!bigDrawn) { drawQR($("#qrBig"), 960); bigDrawn = true; }
+  $("#closeBooth").focus();
+  try { const p = booth.requestFullscreen && booth.requestFullscreen(); if (p && p.catch) p.catch(() => {}); } catch {}
+  try { navigator.wakeLock.request("screen").then(l => { wakeLock = l; }, () => {}); } catch {}
+}
+function closeBooth() {
+  booth.hidden = true;
+  document.body.style.overflow = "";
+  try { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch {}
+  try { if (wakeLock) wakeLock.release(); } catch {}
+  wakeLock = null;
+  if (lastFocus && lastFocus.focus) lastFocus.focus();
+}
+$("#openBooth").addEventListener("click", openBooth);
+$("#closeBooth").addEventListener("click", closeBooth);
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !booth.hidden) closeBooth(); });
+
+/* Currency toggle */
+function setCurrency(c) {
+  $$("[data-price]").forEach(el => { el.textContent = CONFIG.prices[c][el.dataset.price]; });
+  $$(".cur button").forEach(b => b.setAttribute("aria-pressed", b.dataset.cur === c));
+  try { localStorage.setItem("currency", c); } catch {}
+}
+let currency = CONFIG.defaultCurrency;
+try { currency = localStorage.getItem("currency") || currency; } catch {}
+if (!CONFIG.prices[currency]) currency = "INR";
+setCurrency(currency);
+$$(".cur button").forEach(b => b.addEventListener("click", () => setCurrency(b.dataset.cur)));
+</script>
