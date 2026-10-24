@@ -38,14 +38,24 @@ export async function runAgent(
 ): Promise<AgentRun | null> {
   const c = agenticorg();
   if (!c || !agentId) return null;
+  const started = Date.now();
+  console.log(JSON.stringify({ tag: "agenticorg", event: "run_start", action, agentId, inputBytes: JSON.stringify(inputs).length }));
   try {
     const res = await withTimeout(
       (c as unknown as { agents: { run: (id: string, body: unknown) => Promise<AgentRun> } }).agents.run(agentId, { action, inputs: withInstructions(action, inputs) }),
       timeoutMs,
     );
+    const out = res?.output as Record<string, unknown> | undefined;
+    console.log(JSON.stringify({
+      tag: "agenticorg", event: res ? "run_done" : "run_timeout", action, agentId, ms: Date.now() - started,
+      runId: res?.run_id ?? null, status: res?.status ?? null, hitl: res?.hitl_trigger ?? null,
+      confidence: (res as { confidence?: number } | null)?.confidence ?? null,
+      outputKeys: out && typeof out === "object" ? Object.keys(out).slice(0, 8) : typeof res?.output,
+      error: res?.error ?? null,
+    }));
     return res;
   } catch (err) {
-    console.error("agent run failed", action, (err as Error).message);
+    console.error(JSON.stringify({ tag: "agenticorg", event: "run_error", action, agentId, ms: Date.now() - started, error: (err as Error).message.slice(0, 300) }));
     return null;
   }
 }

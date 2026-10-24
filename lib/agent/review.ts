@@ -153,8 +153,10 @@ export async function requestReview(opts: {
   // stays pending_review for /admin/approvals.
   if (client && workflowId) {
     try {
+      const wfStarted = Date.now();
       const res = await withTimeout(client.workflows.run(workflowId, { payload: withInstructions(action, { action, ...inputs }) }), 25_000);
       const id = res ? (res.run_id ?? res.id ?? res.workflow_run_id) : null;
+      console.log(JSON.stringify({ tag: "agenticorg", event: res ? "workflow_started" : "workflow_timeout", action, workflowId, runId: id ?? null, status: res?.status ?? null, ms: Date.now() - wfStarted }));
       if (typeof id === "string" || typeof id === "number") {
         mode = "workflow";
         runId = String(id);
