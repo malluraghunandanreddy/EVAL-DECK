@@ -71,9 +71,21 @@ function manifestFindings(files: RepoFile[]): CodeFinding[] {
 const LLM_HISTORY = /histor|chat_?log|conversation|transcript|previous_?messages|past_?messages|all_?messages|\.\.\.\s*messages|messages\s*:\s*[a-zA-Z_]/i;
 const LOG_CALL = /\bconsole\.(log|info|debug|warn|error)\s*\(|\blogger\.\w+\s*\(|\blogging\.\w+\s*\(|\bprint\s*\(/;
 
+/** Line range around i, clipped to the enclosing top-level statement (a route handler, function, def). */
+function blockWindow(lines: string[], i: number, before: number, after: number): [number, number] {
+  const top = (l: string) => /^\S/.test(l) && !/^[})\]]/.test(l);
+  let a = i;
+  while (a > Math.max(0, i - before) && !top(lines[a])) a--;
+  let b = i;
+  while (b < Math.min(lines.length - 1, i + after) && !(b > i && /^\S/.test(lines[b]))) b++;
+  if (b > i && top(lines[b])) b--;
+  return [a, b];
+}
+
 function windowTypes(lines: string[], i: number, before: number, after: number): string[] {
   const set = new Set<string>();
-  for (let j = Math.max(0, i - before); j <= Math.min(lines.length - 1, i + after); j++) for (const d of classifyLine(lines[j])) set.add(d);
+  const [a, b] = blockWindow(lines, i, before, after);
+  for (let j = a; j <= b; j++) for (const d of classifyLine(lines[j])) set.add(d);
   return [...set];
 }
 
@@ -95,7 +107,7 @@ export function detectCode(files: RepoFile[]): CodeFinding[] {
       if (sdk.usage) {
         lines.forEach((l, i) => {
           if (!sdk.usage!.test(l)) return;
-          const extra = windowTypes(lines, i, 2, 8).filter((d) => !types.has(d));
+          const extra = windowTypes(lines, i, 1, 3).filter((d) => !types.has(d));
           if (extra.length && at === line) { at = i + 1; snip = l; }
           extra.forEach((d) => types.add(d));
         });
@@ -109,8 +121,9 @@ export function detectCode(files: RepoFile[]): CodeFinding[] {
       lines.forEach((l, i) => {
         const v = llmVendors.find((x) => x.usage?.test(l)) ?? (SDK_CATALOG.find((x) => x.id === "openai")!.usage!.test(l) ? llmVendors[0] : undefined);
         if (!v) return;
-        const win = lines.slice(Math.max(0, i - 12), i + 15).join("\n");
-        const types = new Set(windowTypes(lines, i, 12, 14));
+        const [a, b] = blockWindow(lines, i, 12, 8);
+        const win = lines.slice(a, b + 1).join("\n");
+        const types = new Set(windowTypes(lines, i, 12, 8));
         if (LLM_HISTORY.test(win)) types.add("chat_history");
         // provider for langchain wrappers
         const provider = v.thirdParty ? v : (/Anthropic/.test(l) ? SDK_CATALOG.find((x) => x.id === "anthropic")! : /Google/.test(l) ? SDK_CATALOG.find((x) => x.id === "google_ai")! : SDK_CATALOG.find((x) => x.id === "openai")!);

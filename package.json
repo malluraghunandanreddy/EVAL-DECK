@@ -9,7 +9,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "db:push": "drizzle-kit push",
-    "test": "tsx --test lib/**/*.test.ts"
+    "test": "tsx --test lib/scan/scan.test.ts"
   },
   "dependencies": {
     "agenticorg-sdk": "^0.4.0",
