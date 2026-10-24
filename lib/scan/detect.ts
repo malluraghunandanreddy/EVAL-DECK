@@ -5,6 +5,32 @@ import { classifyLine } from "./pii";
 
 const CODE_EXT = /\.(m?[jt]sx?|cjs|py|vue|svelte|html?)$/i;
 const isCode = (rel: string) => CODE_EXT.test(rel);
+const isHtml = (rel: string) => /\.html?$/i.test(rel);
+
+/**
+ * HTML pages are mostly prose. Only lines inside <script> blocks, or lines carrying form controls, count as
+ * code for PII and vendor detection; marketing copy that mentions "Aadhaar" or shows an OpenAI code sample
+ * in a <pre> must not become a finding. Returns one flag per line.
+ */
+/** Drop sentence-like string literals (3+ spaces, 25+ chars) so UI copy and mock data inside scripts are not read as PII handling. */
+function stripProseLiterals(line: string): string {
+  return line.replace(/(["'`“])([^"'`”]{25,})(["'`”])/g, (m, q, body) => (body.split(" ").length >= 4 ? `${q}…${q}` : m));
+}
+
+function htmlCodeLines(lines: string[]): boolean[] {
+  const flags = new Array<boolean>(lines.length).fill(false);
+  let inScript = false;
+  let inPre = false;
+  lines.forEach((l, i) => {
+    if (/<pre\b|<code\b/i.test(l)) inPre = true;
+    const opensScript = /<script\b(?![^>]*type=["'](application\/(ld\+)?json|text\/template)["'])/i.test(l);
+    if (opensScript) inScript = true;
+    flags[i] = (inScript && !inPre) || /<(input|select|textarea|form)\b/i.test(l);
+    if (/<\/script>/i.test(l)) inScript = false;
+    if (/<\/pre>|<\/code>/i.test(l)) inPre = false;
+  });
+  return flags;
+}
 const isPy = (rel: string) => /\.py$/i.test(rel);
 
 function snippet(line: string): string {
@@ -95,7 +121,13 @@ export function detectCode(files: RepoFile[]): CodeFinding[] {
   for (const f of files) {
     if (!isCode(f.rel)) continue;
     const lines = f.text.split("\n");
-    const imported = importsIn(f);
+    const html = isHtml(f.rel);
+    const codeish = html ? htmlCodeLines(lines) : null;
+    const isCodeLine = (i: number) => !codeish || codeish[i];
+    // In HTML only form controls count as collecting personal data; inline scripts still count for vendors and LLM calls.
+    const isFieldLine = (i: number) => !html || /<(input|select|textarea)\b/i.test(lines[i]);
+    const scanLine = (l: string) => (html ? stripProseLiterals(l) : l);
+    const imported = importsIn(f).filter((x) => isCodeLine(x.line - 1));
     const vendorsHere = imported.map((x) => x.sdk);
 
     // third-party usage: the import itself, enriched with PII seen around each usage call
@@ -119,7 +151,9 @@ export function detectCode(files: RepoFile[]): CodeFinding[] {
     const llmVendors = vendorsHere.filter((v) => v.category === "llm");
     if (llmVendors.length) {
       lines.forEach((l, i) => {
-        const v = llmVendors.find((x) => x.usage?.test(l)) ?? (SDK_CATALOG.find((x) => x.id === "openai")!.usage!.test(l) ? llmVendors[0] : undefined);
+        if (!isCodeLine(i)) return;
+        const sl = scanLine(l);
+        const v = llmVendors.find((x) => x.usage?.test(sl)) ?? (SDK_CATALOG.find((x) => x.id === "openai")!.usage!.test(sl) ? llmVendors[0] : undefined);
         if (!v) return;
         const [a, b] = blockWindow(lines, i, 12, 8);
         const win = lines.slice(a, b + 1).join("\n");
@@ -137,8 +171,9 @@ export function detectCode(files: RepoFile[]): CodeFinding[] {
     // PII fields and logging: first occurrence of each data type per file
     const seenTypes = new Set<string>();
     lines.forEach((l, i) => {
+      if (!isCodeLine(i) || !isFieldLine(i)) return;
       if (l.length > 400 || /^\s*(\/\/|#|\*)/.test(l)) return;
-      const types = classifyLine(l);
+      const types = classifyLine(scanLine(l));
       if (!types.length) return;
       if (LOG_CALL.test(l)) {
         findings.push({ kind: "logging", dataTypes: types, file: f.rel, line: i + 1, snippet: snippet(l), summary: `Logs ${types.join(", ")}.` });
