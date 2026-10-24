@@ -124,7 +124,10 @@ export async function requestReview(opts: {
   // synchronous run; its hitl_triggered status also files an approval item on AgenticOrg).
   if (client && reviewerId) {
     const res = await runAgent(reviewerId, action, inputs, opts.agentTimeoutMs ?? 60_000);
-    const failed = !res || /fail|error/i.test(String(res.status ?? "")) || (!!res.error && !res.output);
+    // Some AgenticOrg agent personas "escalate" instead of drafting (output.status = escalated, no policy_md). Treat as a failed run.
+    const escalated = !!res && typeof res.output === "object" && res.output !== null && (res.output as { status?: string }).status === "escalated";
+    if (escalated && res) res.error = (res.output as { escalation_reason?: string }).escalation_reason ?? "agent escalated instead of drafting";
+    const failed = !res || escalated || /fail|error/i.test(String(res.status ?? "")) || (!!res.error && !res.output);
     if (res && !failed) {
       mode = "agent";
       runId = res.run_id ? String(res.run_id) : null;

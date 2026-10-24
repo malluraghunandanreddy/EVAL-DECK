@@ -9,6 +9,8 @@ All runs go through `agenticorg-sdk@0.4.0` by agent **UUID** (`POST /api/v1/agen
 > ("follow `inputs.instructions`, reply with ONLY the JSON described") and the full per-action contract is sent on each
 > run from `lib/agent/instructions.ts`. Run statuses seen: `completed`, `failed`, `hitl_triggered` (confidence below the
 > 0.88 floor; output is still returned and an approval item is filed on AgenticOrg), `budget_exceeded`.
+> Agent type matters: the `legal_ops` persona escalates "external legal communications" to an attorney instead of drafting
+> (output.status = escalated, no policy_md), so both agents use `contract_intelligence`. The app treats an escalation as a failed run.
 > Agents and the workflow were created by API (`scripts/agent-smoke.ts` verifies them); IDs live in Vercel env vars.
 
 ## 1. Create the Policy Reader agent

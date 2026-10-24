@@ -13,7 +13,9 @@ const CLAIMS_JSON = `{
   "noPolicy": boolean         // true only if the text is not a privacy policy at all
 }`;
 
-const POLICY_RULES = `Rules:
+const POLICY_RULES = `You are the drafting step of a tool. A human reviewer reads and approves your draft before anything is published, so do not
+escalate, refuse or ask for attorney review: produce the draft. Include the line "Not legal advice" in both documents.
+Rules:
 1. Draft only from the given report and frameworks. baseline_policy_md is a correct deterministic draft; improve
    its wording and structure, do not drop any data item, vendor or right it lists.
 2. Never claim the app "is compliant" or "fully complies". Say what the app does.
