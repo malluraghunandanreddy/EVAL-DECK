@@ -11,7 +11,7 @@ export const users = pgTable("users", {
   // Set by a paid Pro month. Null means Pro never expires (redeem codes, manual grants).
   proUntil: timestamp("pro_until", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}).enableRLS();
 
 export const events = pgTable("events", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -19,7 +19,7 @@ export const events = pgTable("events", {
   type: text("type").notNull(),
   payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}).enableRLS();
 
 export const projects = pgTable("projects", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -37,7 +37,7 @@ export const projects = pgTable("projects", {
   watch: boolean("watch").notNull().default(true),
   dbEnvHints: text("db_env_hints").array(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}).enableRLS();
 
 export const scans = pgTable("scans", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -56,14 +56,14 @@ export const scans = pgTable("scans", {
   unlockedAt: timestamp("unlocked_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   finishedAt: timestamp("finished_at", { withTimezone: true }),
-});
+}).enableRLS();
 
 export const sites = pgTable("sites", {
   id: uuid("id").primaryKey().defaultRandom(),
   projectId: uuid("project_id").notNull(),
   name: text("name").notNull(),
   outOfDate: boolean("out_of_date").notNull().default(false),
-});
+}).enableRLS();
 
 export const policyVersions = pgTable("policy_versions", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -79,7 +79,7 @@ export const policyVersions = pgTable("policy_versions", {
   lastPolledAt: timestamp("last_polled_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   approvedAt: timestamp("approved_at", { withTimezone: true }),
-});
+}).enableRLS();
 
 export const piiTags = pgTable("pii_tags", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -88,7 +88,7 @@ export const piiTags = pgTable("pii_tags", {
   columnName: text("column_name").notNull(),
   dataType: text("data_type").notNull(),
   source: text("source").notNull().default("user"),
-});
+}).enableRLS();
 
 export const orders = pgTable("orders", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -98,7 +98,7 @@ export const orders = pgTable("orders", {
   amountPaise: integer("amount_paise").notNull(),
   status: text("status").notNull().default("created"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}).enableRLS();
 
 // In-app notifications written by the Drift Watch agent (new commit, new gaps, policy draft ready).
 export const notifications = pgTable("notifications", {
@@ -113,7 +113,7 @@ export const notifications = pgTable("notifications", {
   emailedAt: timestamp("emailed_at", { withTimezone: true }),
   readAt: timestamp("read_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}).enableRLS();
 
 export type User = typeof users.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;

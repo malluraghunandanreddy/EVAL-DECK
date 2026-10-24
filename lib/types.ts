@@ -45,6 +45,7 @@ export type DbFinding = {
   column?: string;
   kind: "pii_column" | "broad_read_access" | "rls_off" | "no_ttl";
   roles?: string[];
+  dataTypes?: string[];
   detail: string;
 };
 

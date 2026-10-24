@@ -39,8 +39,11 @@ export function classifyName(name: string, mode: "column" | "code" = "column", t
   if (has("useragent", "fingerprint") || joined.includes("useragent") || joined.includes("deviceid") ||
       (mode === "column" && has("device"))) out.add("device");
   if (/cardnumber|cardno|upi|iban|accountnumber|ifsc|cvv/.test(joined)) out.add("payment");
-  if (/fullname|firstname|lastname|displayname|surname|username/.test(joined) ||
-      (mode === "column" && joined === "name" && (!table || USERISH_TABLE.test(table)))) out.add("name");
+  // "name" is a person only when the identifier is not naming a repo, project, file, table, org, plan, site, branch...
+  const NOT_A_PERSON = ["repo", "repository", "project", "app", "application", "file", "filename", "table", "column", "org", "organization", "company", "plan", "site", "branch", "model", "product", "package", "host", "domain", "bucket", "role", "event", "type", "tag", "label"];
+  const namedThing = t.some((w) => NOT_A_PERSON.includes(w));
+  if (!namedThing && (/fullname|firstname|lastname|displayname|surname|username/.test(joined) ||
+      (mode === "column" && joined === "name" && (!table || USERISH_TABLE.test(table))))) out.add("name");
   return [...out];
 }
 

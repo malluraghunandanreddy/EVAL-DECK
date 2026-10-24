@@ -75,7 +75,10 @@ export async function checkLiveDb(rawUrl: string, opts: { timeoutMs?: number } =
       const key = (s: string, t: string) => `${s}.${t}`;
       const label = (s: string, t: string) => (s === "public" ? t : `${s}.${t}`);
       const piiByTable = new Map<string, { col: Col; types: string[] }[]>();
+      // Only columns that can hold a string of personal data: timestamps, booleans, uuids and numbers never do.
+      const STRINGISH = /char|text|json|citext|bytea|xml|array/i;
       for (const c of cols) {
+        if (!STRINGISH.test(c.type)) continue;
         const types = classifyName(c.column, "column", c.table);
         if (!types.length) continue;
         const k = key(c.schema, c.table);
@@ -124,6 +127,7 @@ export async function checkLiveDb(rawUrl: string, opts: { timeoutMs?: number } =
             table: name,
             column: e.col.column,
             kind: "pii_column",
+            dataTypes: e.types,
             detail: `${e.col.type}; looks like ${e.types.join(", ")}${live.length ? `; sample rows contain ${live.join(", ")}` : ""}`,
           });
         }

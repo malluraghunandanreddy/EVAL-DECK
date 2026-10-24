@@ -224,6 +224,8 @@ export function runEngine(input: EngineInput): Gap[] {
         checklist: { DPDP: ["dpdp_erasure"], GDPR: ["gdpr_retention"], CCPA: ["ccpa_retention"] },
         fix: `Schedule a delete on ${f.table} for rows older than your stated retention period.` });
     } else if (f.kind === "pii_column") {
+      // Already disclosed in the policy: the column is personal data, but not a gap.
+      if (f.dataTypes?.length && !claims.noPolicy && f.dataTypes.every((d) => claimed(claims, d))) continue;
       out.push({ id: `db_pii_column:${slug(f.table)}_${slug(f.column ?? "")}`, severity: "medium", title: `Personal data found in ${f.table}${f.column ? "." + f.column : ""}`,
         layer: "policy_vs_storage", evidence: [{ table: f.column ? `${f.table}.${f.column}` : f.table, snippet: f.detail }],
         law: { DPDP: [LAW.DPDP_5], GDPR: [LAW.GDPR_13], CCPA: [LAW.CCPA_100] },
