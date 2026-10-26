@@ -1,7 +1,8 @@
 import { AgenticOrg } from "agenticorg-sdk";
 import { withInstructions } from "./agent/instructions";
+import { ownAgentEnabled, runOwnAgent } from "./agent/own";
 
-// Every AI step goes through AgenticOrg agents (no Claude API key today).
+// Every AI step goes through runAgent(): TriLens' own Claude agent when ANTHROPIC_API_KEY is set, else AgenticOrg agents.
 // Callers must always have a deterministic fallback: these helpers return null on any failure or timeout.
 
 let client: AgenticOrg | null = null;
@@ -36,6 +37,7 @@ export async function runAgent(
   inputs: Record<string, unknown>,
   timeoutMs = 30_000,
 ): Promise<AgentRun | null> {
+  if (ownAgentEnabled()) return runOwnAgent(action, inputs, timeoutMs);
   const c = agenticorg();
   if (!c || !agentId) return null;
   const started = Date.now();

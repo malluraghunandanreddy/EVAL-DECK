@@ -7,6 +7,7 @@ import { hmacHex, safeEqual } from "@/lib/crypto";
 import { approveVersion, rejectVersion } from "@/lib/agent/approve";
 import { UUID_RE } from "@/lib/agent/access";
 import { liveStats } from "@/lib/admin-live";
+import { ownAgentEnabled } from "@/lib/agent/own";
 
 export const dynamic = "force-dynamic";
 
@@ -131,8 +132,8 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
           ["Users", String(stats.users.total), `${stats.users.last10} in last 10 min`],
           ["Reports done", String(stats.scans.done), `${stats.scans.active} running`],
           ["Pending approvals", String(pending.length), `${decided.length} decided`],
-          ["Reader agent", process.env.AGENTICORG_READER_AGENT_ID ? "configured" : "missing", lastRun ? `last run ${fmt.format(lastRun.at)} · ${lastRun.status}` : "no run yet"],
-          ["Reviewer agent", process.env.AGENTICORG_REVIEWER_AGENT_ID ? "configured" : "missing", lastRun ? (lastRun.draftFromAgent ? "last draft came from the agent" : `last run: ${lastRun.error ?? "fallback draft used"}`) : "no run yet"],
+          ["Reader agent", ownAgentEnabled() ? "TriLens agent (Haiku)" : process.env.AGENTICORG_READER_AGENT_ID ? "configured" : "missing", lastRun ? `last run ${fmt.format(lastRun.at)} · ${lastRun.status}` : "no run yet"],
+          ["Reviewer agent", ownAgentEnabled() ? "TriLens agent (Haiku)" : process.env.AGENTICORG_REVIEWER_AGENT_ID ? "configured" : "missing", lastRun ? (lastRun.draftFromAgent ? "last draft came from the agent" : `last run: ${lastRun.error ?? "fallback draft used"}`) : "no run yet"],
           ["Drift Watch", stats.watch ? `${fmt.format(new Date(stats.watch.at))}` : "no run yet", stats.watch ? `${stats.watch.checked ?? 0} repos checked, ${stats.watch.changed ?? 0} changed` : "GitHub Actions every 5 min"],
         ] as [string, string, string][]).map(([k, v, sub]) => (
           <div key={k} className="panel" style={{ minWidth: 150, flex: "1 1 150px", padding: "10px 12px" }}>

@@ -1,4 +1,5 @@
 import { withInstructions } from "./instructions";
+import { ownAgentEnabled } from "./own";
 import { and, desc, eq } from "drizzle-orm";
 import { db, logEvent, schema } from "../db";
 import type { PolicyVersion, Project, Scan } from "../db/schema";
@@ -122,7 +123,7 @@ export async function requestReview(opts: {
 
   // Step 1: the Compliance Reviewer agent drafts (hackathon key: run-only, so we take the draft from the
   // synchronous run; its hitl_triggered status also files an approval item on AgenticOrg).
-  if (client && reviewerId) {
+  if ((client && reviewerId) || ownAgentEnabled()) {
     const res = await runAgent(reviewerId, action, inputs, opts.agentTimeoutMs ?? 60_000);
     // Some AgenticOrg agent personas "escalate" instead of drafting (output.status = escalated, no policy_md). Treat as a failed run.
     const escalated = !!res && typeof res.output === "object" && res.output !== null && (res.output as { status?: string }).status === "escalated";
@@ -151,7 +152,7 @@ export async function requestReview(opts: {
   // Step 2: the "PolicyDrift review" workflow = reviewer step -> human_in_loop -> finish. Starting it creates the
   // approval item on AgenticOrg. We poll getRun from report polls when the key allows reads; otherwise the draft
   // stays pending_review for /admin/approvals.
-  if (client && workflowId) {
+  if (client && workflowId && !ownAgentEnabled()) {
     try {
       const wfStarted = Date.now();
       // The workflow exists to file the human-approval item on AgenticOrg; the tenant rejects large bodies,
