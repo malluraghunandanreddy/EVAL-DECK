@@ -30,3 +30,6 @@
 @media (max-width: 640px) { .db-grid { grid-template-columns: minmax(0, 1fr); } }
 .db-pick { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; display: grid; gap: 8px; margin: 0; }
 .db-pick legend { font-weight: 650; padding: 0 4px; }
+.db-key { display: grid; gap: 10px; padding: 14px 16px; border: 1.5px solid var(--pro-line); border-radius: 12px; background: var(--mark-soft); font-size: .95rem; }
+.db-key-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.db-key-row code { display: block; padding: 10px 12px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line); font-size: .78rem; overflow-x: auto; white-space: nowrap; }

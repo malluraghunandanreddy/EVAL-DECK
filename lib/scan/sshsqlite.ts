@@ -65,16 +65,24 @@ function connect(login: SshLogin, ip: string): Promise<Client> {
       else if (/timed out|ETIMEDOUT|EHOSTUNREACH|ENETUNREACH/i.test(err.message)) fail("Couldn't reach the server. Check the IP address, and that the firewall allows SSH.");
       else fail("Couldn't connect to the server over SSH.");
     });
-    conn.connect({
-      host: ip,
-      port: login.port ?? 22,
-      username: login.username,
-      password: login.password || undefined,
-      privateKey: login.privateKey || undefined,
-      passphrase: login.passphrase || undefined,
-      readyTimeout: CONNECT_MS,
-      tryKeyboard: false,
-    });
+    try {
+      conn.connect({
+        host: ip,
+        port: login.port ?? 22,
+        username: login.username,
+        password: login.password || undefined,
+        privateKey: login.privateKey?.trim() ? login.privateKey.trim() + "\n" : undefined,
+        passphrase: login.passphrase || undefined,
+        readyTimeout: CONNECT_MS,
+        tryKeyboard: false,
+      });
+    } catch (err) {
+      // ssh2 throws synchronously when the key can't be read (public key pasted, wrong passphrase, .ppk format).
+      const m = (err as Error).message ?? "";
+      if (/passphrase|encrypted|bad decrypt|integrity/i.test(m)) fail("The SSH key's passphrase is wrong, or the key needs one. Leave the passphrase empty if the key has none.");
+      else if (/parse|unsupported|key/i.test(m)) fail("That doesn't look like a private SSH key. Paste the private key (it starts with -----BEGIN … PRIVATE KEY-----), not the .pub file, or use Password instead.");
+      else fail("Couldn't start the SSH connection.");
+    }
   });
 }
 

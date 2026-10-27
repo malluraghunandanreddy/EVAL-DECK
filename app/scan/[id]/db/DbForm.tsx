@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Result = { tables: number; columns: number; piiColumns: number; rlsOff: string[]; broadRead: string[]; sampledRows: number; findings: number; gaps: number };
 
@@ -13,7 +13,14 @@ export default function DbForm({ scanId, checked, sqliteCommand }: { scanId: str
   const [host, setHost] = useState("");
   const [port, setPort] = useState("22");
   const [username, setUsername] = useState("root");
-  const [authType, setAuthType] = useState<"password" | "key">("password");
+  // "trilens": the customer adds TriLens's public key to the server once; nothing secret is typed in.
+  const [authType, setAuthType] = useState<"trilens" | "password" | "key">("trilens");
+  const [trilensKey, setTrilensKey] = useState<string | null>(null);
+  const [keyCopied, setKeyCopied] = useState(false);
+  useEffect(() => {
+    if (mode !== "sqlite" || trilensKey) return;
+    fetch("/api/ssh-key").then((r) => r.json()).then((d) => d.publicKey && setTrilensKey(d.publicKey)).catch(() => {});
+  }, [mode, trilensKey]);
   const [password, setPassword] = useState("");
   const [privateKey, setPrivateKey] = useState("");
   const [passphrase, setPassphrase] = useState("");
@@ -27,7 +34,8 @@ export default function DbForm({ scanId, checked, sqliteCommand }: { scanId: str
     e.preventDefault();
     setBusy(true); setError(null); setResult(null);
     try {
-      const ssh = { host, port: Number(port) || 22, username, ...(authType === "password" ? { password } : { privateKey, passphrase: passphrase || undefined }) };
+      const ssh = { host, port: Number(port) || 22, username,
+        ...(authType === "trilens" ? { useTrilensKey: true } : authType === "password" ? { password } : { privateKey, passphrase: passphrase || undefined }) };
       const payload = mode === "postgres" ? { url } : sqliteWay === "manual" ? { sqliteReport: report } : { ssh, dbPath: candidates ? dbPath || null : null };
       const r = await fetch(`/api/scans/${scanId}/db`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const data = await r.json();
@@ -93,9 +101,25 @@ export default function DbForm({ scanId, checked, sqliteCommand }: { scanId: str
         <>
           <p style={{ margin: 0, fontSize: 14 }}>
             TriLens logs in to your server, finds your SQLite database and reads its <strong>structure only</strong>: tables, columns,
-            row counts and file permissions. It opens the database read-only, changes nothing, never reads customer records, and
-            forgets your login as soon as the check finishes.
+            row counts and file permissions. It opens the database read-only, changes nothing and never reads customer records.
           </p>
+          {authType === "trilens" && (
+            <div className="db-key">
+              <p style={{ margin: 0 }}><strong>Step 1.</strong> Copy your TriLens access key:</p>
+              <div className="db-key-row">
+                <code>{trilensKey ?? "Loading your key…"}</code>
+                <button type="button" className="btn sm" disabled={!trilensKey}
+                  onClick={async () => { if (!trilensKey) return; try { await navigator.clipboard.writeText(trilensKey); setKeyCopied(true); setTimeout(() => setKeyCopied(false), 2000); } catch { /* select manually */ } }}>
+                  {keyCopied ? "Copied" : "Copy key"}
+                </button>
+              </div>
+              <p style={{ margin: 0 }}>
+                <strong>Step 2.</strong> In <a href="https://hpanel.hostinger.com" target="_blank" rel="noreferrer">Hostinger hPanel</a>, open
+                <strong> VPS → your server → Settings → SSH keys → Add SSH key</strong>, paste it, and save. You only do this once.
+              </p>
+              <p style={{ margin: 0 }}><strong>Step 3.</strong> Enter your server&apos;s IP address below (hPanel → VPS → Overview) and click Connect.</p>
+            </div>
+          )}
           <div className="db-grid">
             <div>
               <label htmlFor="ssh-host">Server IP address</label>
@@ -111,10 +135,11 @@ export default function DbForm({ scanId, checked, sqliteCommand }: { scanId: str
             </div>
           </div>
           <div className="ob-seg" role="group" aria-label="Login method" style={{ justifySelf: "start" }}>
+            <button type="button" aria-pressed={authType === "trilens"} onClick={() => setAuthType("trilens")}>TriLens key (easiest)</button>
             <button type="button" aria-pressed={authType === "password"} onClick={() => setAuthType("password")}>Password</button>
-            <button type="button" aria-pressed={authType === "key"} onClick={() => setAuthType("key")}>SSH key</button>
+            <button type="button" aria-pressed={authType === "key"} onClick={() => setAuthType("key")}>My own SSH key</button>
           </div>
-          {authType === "password" ? (
+          {authType === "trilens" ? null : authType === "password" ? (
             <div>
               <label htmlFor="ssh-pass">Password</label>
               <input id="ssh-pass" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="off" required />
@@ -154,8 +179,8 @@ export default function DbForm({ scanId, checked, sqliteCommand }: { scanId: str
             )
           )}
           {error && <p style={{ color: "var(--bad)", margin: 0 }}>{error}</p>}
-          <button className="btn" type="submit" disabled={busy || !host || !username || (authType === "password" ? !password : !privateKey) || (candidates !== null && !dbPath)}>
-            {busy ? (candidates ? "Checking the database…" : "Connecting and searching…") : candidates ? "Check this database" : "Connect and find databases"}
+          <button className="btn" type="submit" disabled={busy || !host || !username || (authType === "password" ? !password : authType === "key" ? !privateKey : !trilensKey) || (candidates !== null && !dbPath)}>
+            {busy ? (candidates ? "Checking the database…" : "Connecting and searching…") : candidates ? "Check this database" : "Connect"}
           </button>
         </>
       ) : mode === "sqlite" ? (

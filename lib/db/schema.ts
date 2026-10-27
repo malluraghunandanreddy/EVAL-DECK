@@ -10,6 +10,9 @@ export const users = pgTable("users", {
   isPro: boolean("is_pro").notNull().default(false),
   // Set by a paid Pro month. Null means Pro never expires (redeem codes, manual grants).
   proUntil: timestamp("pro_until", { withTimezone: true }),
+  // TriLens access key for the SQLite-over-SSH check: the customer adds the public half to their server once.
+  sshPublicKey: text("ssh_public_key"),
+  sshPrivateKeyEnc: text("ssh_private_key_enc"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
 
