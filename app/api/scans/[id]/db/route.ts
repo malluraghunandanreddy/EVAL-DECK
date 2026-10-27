@@ -6,6 +6,7 @@ import { getUser } from "@/lib/session";
 import { ownedScan } from "@/lib/agent/access";
 import { scanUnlocked } from "@/lib/entitlements";
 import { checkLiveDb, LiveDbError } from "@/lib/scan/livedb";
+import { parseSqliteReport, SqliteReportError } from "@/lib/scan/sqlitereport";
 import { engineFromFindings } from "@/lib/scan/evaluate";
 import type { CodeFinding, Coverage, Framework, PolicyClaims, SchemaFinding } from "@/lib/types";
 import type { EngineSignals, DocConflict, DocPromise } from "@/lib/scan/engine";
@@ -14,7 +15,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const Body = z.object({ url: z.string().min(12).max(2000) });
+const Body = z.union([
+  z.object({ url: z.string().min(12).max(2000) }),
+  // SQLite on a server: the structure report printed by SQLITE_REPORT_COMMAND (no row values).
+  z.object({ sqliteReport: z.string().min(20).max(400_000) }),
+]);
 
 // POST /api/scans/:id/db { url }  (unlocked report or Pro monthly)
 // Runs the read-only live database check and re-evaluates the report with the new findings.
@@ -33,15 +38,16 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   try {
     body = Body.parse(await req.json());
   } catch {
-    return NextResponse.json({ error: "Paste a connection string" }, { status: 400 });
+    return NextResponse.json({ error: "Paste a connection string or the SQLite report" }, { status: 400 });
   }
 
   let summary;
+  const kind = "url" in body ? "postgres" : "sqlite";
   try {
-    summary = await checkLiveDb(body.url);
+    summary = "url" in body ? await checkLiveDb(body.url) : parseSqliteReport(body.sqliteReport);
   } catch (err) {
-    const msg = err instanceof LiveDbError ? err.message : "Database check failed";
-    await logEvent("db_check", user.id, { scanId: scan.id, projectId: project.id, ok: false, error: msg.slice(0, 200) });
+    const msg = err instanceof LiveDbError || err instanceof SqliteReportError ? err.message : "Database check failed";
+    await logEvent("db_check", user.id, { scanId: scan.id, projectId: project.id, kind, ok: false, error: msg.slice(0, 200) });
     return NextResponse.json({ error: msg }, { status: 422 });
   }
 
@@ -62,7 +68,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     .set({ dbFindings: summary.findings, gaps, checklist, coverage: { ...cov, liveDb: true } })
     .where(eq(schema.scans.id, scan.id));
   await logEvent("db_check", user.id, {
-    scanId: scan.id, projectId: project.id, ok: true, tables: summary.tables, columns: summary.columns,
+    scanId: scan.id, projectId: project.id, kind, ok: true, tables: summary.tables, columns: summary.columns,
     piiColumns: summary.piiColumns, rlsOff: summary.rlsOff.length, broadRead: summary.broadRead.length, sampledRows: summary.sampledRows,
   });
   const { findings: _omit, ...rest } = summary;

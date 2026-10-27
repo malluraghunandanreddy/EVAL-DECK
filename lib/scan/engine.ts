@@ -238,13 +238,13 @@ export function runEngine(input: EngineInput): Gap[] {
         title: f.kind === "rls_off" ? `Row-level security is off on ${f.table}` : `${(f.roles ?? []).join(", ") || "Broad roles"} can read ${f.table}${f.column ? "." + f.column : ""}`,
         layer: "storage_access", evidence: [{ table: f.column ? `${f.table}.${f.column}` : f.table, snippet: f.detail }],
         law: { DPDP: [LAW.DPDP_8_5], GDPR: [LAW.GDPR_32], SOC2: [LAW.SOC2_CC6] }, checklist: { DPDP: ["dpdp_security"], GDPR: ["gdpr_security"], SOC2: ["soc2_access_control"] },
-        fix: f.kind === "rls_off" ? `ALTER TABLE ${f.table} ENABLE ROW LEVEL SECURITY; then add policies limiting each user to their own rows.` : `REVOKE SELECT ON ${f.table} FROM anon, authenticated, PUBLIC; grant reads only to the roles that need them.` });
+        fix: f.fix ?? (f.kind === "rls_off" ? `ALTER TABLE ${f.table} ENABLE ROW LEVEL SECURITY; then add policies limiting each user to their own rows.` : `REVOKE SELECT ON ${f.table} FROM anon, authenticated, PUBLIC; grant reads only to the roles that need them.`) });
     } else if (f.kind === "no_ttl" && !schemaFindings.some((s) => s.kind === "no_ttl" && slug(s.table) === slug(f.table))) {
       out.push({ id: `no_ttl:${slug(f.table)}`, severity: "medium", title: `${f.table} keeps personal data forever (no TTL job in the database)`,
         layer: "storage_access", evidence: [{ table: f.table, snippet: f.detail }],
         law: { DPDP: [LAW.DPDP_8_7], GDPR: [LAW.GDPR_5_1_E], CCPA: [LAW.CCPA_100_A3], SOC2: [LAW.SOC2_P4] },
         checklist: { DPDP: ["dpdp_erasure"], GDPR: ["gdpr_retention"], CCPA: ["ccpa_retention"], SOC2: ["soc2_disposal"] },
-        fix: `Schedule a delete on ${f.table} for rows older than your stated retention period.` });
+        fix: f.fix ?? `Schedule a delete on ${f.table} for rows older than your stated retention period.` });
     } else if (f.kind === "pii_column") {
       // Already disclosed in the policy: the column is personal data, but not a gap.
       if (f.dataTypes?.length && !claims.noPolicy && f.dataTypes.every((d) => claimed(claims, d))) continue;

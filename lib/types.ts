@@ -50,6 +50,8 @@ export type DbFinding = {
   roles?: string[];
   dataTypes?: string[];
   detail: string;
+  /** Overrides the default fix (used for SQLite files, where access is file permissions, not grants). */
+  fix?: string;
 };
 
 export type PolicyClaims = {

@@ -3,8 +3,11 @@ import { useState } from "react";
 
 type Result = { tables: number; columns: number; piiColumns: number; rlsOff: string[]; broadRead: string[]; sampledRows: number; findings: number; gaps: number };
 
-export default function DbForm({ scanId, checked }: { scanId: string; checked: boolean }) {
+export default function DbForm({ scanId, checked, sqliteCommand }: { scanId: string; checked: boolean; sqliteCommand: string }) {
+  const [mode, setMode] = useState<"postgres" | "sqlite">("postgres");
   const [url, setUrl] = useState("");
+  const [report, setReport] = useState("");
+  const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
@@ -13,11 +16,12 @@ export default function DbForm({ scanId, checked }: { scanId: string; checked: b
     e.preventDefault();
     setBusy(true); setError(null); setResult(null);
     try {
-      const r = await fetch(`/api/scans/${scanId}/db`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) });
+      const r = await fetch(`/api/scans/${scanId}/db`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(mode === "postgres" ? { url } : { sqliteReport: report }) });
       const data = await r.json();
       if (!r.ok) { setError(data.error ?? `HTTP ${r.status}`); return; }
       setResult(data as Result);
       setUrl("");
+      setReport("");
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -31,9 +35,18 @@ export default function DbForm({ scanId, checked }: { scanId: string; checked: b
         <h2 style={{ marginTop: 0 }}>Database checked</h2>
         <ul>
           <li>{result.tables} tables, {result.columns} columns, {result.piiColumns} columns that look like personal data</li>
-          <li>Row-level security off on {result.rlsOff.length ? result.rlsOff.join(", ") : "no personal-data tables"}</li>
-          <li>Broad read access (anon / public) on {result.broadRead.length ? result.broadRead.join(", ") : "no personal-data tables"}</li>
-          <li>{result.sampledRows} rows sampled in memory and discarded</li>
+          {mode === "postgres" ? (
+            <>
+              <li>Row-level security off on {result.rlsOff.length ? result.rlsOff.join(", ") : "no personal-data tables"}</li>
+              <li>Broad read access (anon / public) on {result.broadRead.length ? result.broadRead.join(", ") : "no personal-data tables"}</li>
+              <li>{result.sampledRows} rows sampled in memory and discarded</li>
+            </>
+          ) : (
+            <>
+              <li>Files readable by others or inside a web folder: {result.broadRead.length ? result.broadRead.join(", ") : "none"}</li>
+              <li>No row values were read: the report contains structure and row counts only</li>
+            </>
+          )}
         </ul>
         <p className="muted" style={{ fontSize: 14 }}>Your report now has {result.gaps} gaps including {result.findings} database findings.</p>
         <a className="btn" href={`/scan/${scanId}`}>Back to the updated report</a>
@@ -44,6 +57,38 @@ export default function DbForm({ scanId, checked }: { scanId: string; checked: b
   return (
     <form onSubmit={run} className="panel rp-section" style={{ display: "grid", gap: 10 }}>
       {checked && <p className="notice good" style={{ margin: 0 }}>This report already includes a database check. Running it again replaces those findings.</p>}
+      <div className="ob-seg" role="group" aria-label="Database type" style={{ justifySelf: "start" }}>
+        <button type="button" aria-pressed={mode === "postgres"} onClick={() => setMode("postgres")}>Postgres / Supabase</button>
+        <button type="button" aria-pressed={mode === "sqlite"} onClick={() => setMode("sqlite")}>SQLite on a server (VPS)</button>
+      </div>
+      {mode === "sqlite" ? (
+        <>
+          <p style={{ margin: 0, fontSize: 14 }}>
+            SQLite is a file on your server (for example a Hostinger VPS), so TriLens can&apos;t connect to it. Run this on the server
+            instead. It opens the database read-only and prints only its structure: tables, columns, row counts, the file&apos;s permissions
+            and location, and backup files next to it. <strong>No customer data is read or sent.</strong>
+          </p>
+          <ol style={{ margin: 0, paddingLeft: 20, fontSize: 14 }}>
+            <li>Connect to the server: <code>ssh root@your-server-ip</code> (Hostinger: hPanel → VPS → Overview shows the IP and SSH details).</li>
+            <li>Find the database file, for example: <code>find / -name &quot;*.db&quot; -o -name &quot;*.sqlite*&quot; 2&gt;/dev/null | grep -v /proc</code></li>
+            <li>Copy the command below, change <code>/path/to/your-app.db</code> to that file, paste it into the server and press Enter.</li>
+            <li>Copy everything it prints and paste it in the box below.</li>
+          </ol>
+          <div style={{ position: "relative" }}>
+            <pre className="rp-code" style={{ fontSize: 12, maxHeight: 260, overflow: "auto" }}>{sqliteCommand}</pre>
+            <button type="button" className="btn secondary sm" style={{ position: "absolute", top: 8, right: 8 }}
+              onClick={async () => { try { await navigator.clipboard.writeText(sqliteCommand); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { /* select manually */ } }}>
+              {copied ? "Copied" : "Copy"}
+            </button>
+          </div>
+          <label htmlFor="sqlitereport">What the command printed</label>
+          <textarea id="sqlitereport" rows={10} value={report} onChange={(e) => setReport(e.target.value)} spellCheck={false}
+            placeholder="-- trilens sqlite v1&#10;-- file 644 524288 /var/www/app/data/app.db&#10;CREATE TABLE users (...);" style={{ fontFamily: "var(--font-mono)", fontSize: 12 }} />
+          {error && <p style={{ color: "var(--bad)", margin: 0 }}>{error}</p>}
+          <button className="btn" type="submit" disabled={busy || report.trim().length < 20}>{busy ? "Checking…" : "Check this SQLite database"}</button>
+        </>
+      ) : (
+      <>
       <label htmlFor="dburl">Postgres connection string</label>
       <input id="dburl" value={url} onChange={(e) => setUrl(e.target.value)} required autoComplete="off" spellCheck={false}
         placeholder="postgresql://postgres.xxxx:password@aws-0-ap-south-1.pooler.supabase.com:6543/postgres" />
@@ -70,6 +115,8 @@ grant select on all tables in schema public to trilens_ro;`}</pre>
       </p>
       {error && <p style={{ color: "var(--bad)", margin: 0 }}>{error}</p>}
       <button className="btn" type="submit" disabled={busy || !url}>{busy ? "Checking… (up to 30s)" : "Run read-only check"}</button>
+      </>
+      )}
     </form>
   );
 }
