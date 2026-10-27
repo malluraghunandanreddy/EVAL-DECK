@@ -1,5 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
+import type { CandidateKind, DbCandidate } from "@/lib/scan/dbcandidates";
+
+const KIND_LABEL: Record<CandidateKind, string> = { app: "", run: "per-run file", backup: "backup or old copy", test: "test file", system: "operating system" };
 
 type Result = { tables: number; columns: number; piiColumns: number; rlsOff: string[]; broadRead: string[]; sampledRows: number; findings: number; gaps: number };
 
@@ -24,7 +27,8 @@ export default function DbForm({ scanId, checked, sqliteCommand }: { scanId: str
   const [password, setPassword] = useState("");
   const [privateKey, setPrivateKey] = useState("");
   const [passphrase, setPassphrase] = useState("");
-  const [candidates, setCandidates] = useState<string[] | null>(null);
+  const [candidates, setCandidates] = useState<DbCandidate[] | null>(null);
+  const [showAll, setShowAll] = useState(false);
   const [dbPath, setDbPath] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,8 +46,10 @@ export default function DbForm({ scanId, checked, sqliteCommand }: { scanId: str
       if (!r.ok) { setError(data.error ?? `HTTP ${r.status}`); return; }
       if (Array.isArray(data.candidates)) {
         // Step 1 of the automatic check: show the SQLite files found on the server.
-        setCandidates(data.candidates);
-        setDbPath(data.candidates[0] ?? "");
+        const found = data.candidates as DbCandidate[];
+        setCandidates(found);
+        setShowAll(!found.some((c) => c.kind === "app"));
+        setDbPath(found[0]?.path ?? "");
         return;
       }
       setResult(data as Result);
@@ -165,11 +171,18 @@ export default function DbForm({ scanId, checked, sqliteCommand }: { scanId: str
             candidates.length ? (
               <fieldset className="db-pick">
                 <legend>Databases found on your server. Pick the one your app uses:</legend>
-                {candidates.map((c) => (
-                  <label key={c} className="ob-check" style={{ display: "flex", fontFamily: "var(--font-mono)", fontSize: 13 }}>
-                    <input type="radio" name="dbpath" checked={dbPath === c} onChange={() => setDbPath(c)} /> {c}
+                {candidates.filter((c) => showAll || c.kind === "app" || c.path === dbPath).map((c) => (
+                  <label key={c.path} className="ob-check db-cand">
+                    <input type="radio" name="dbpath" checked={dbPath === c.path} onChange={() => setDbPath(c.path)} />
+                    <span className="db-cand-path">{c.path}</span>
+                    {c.suggested ? <span className="db-tag good">Suggested</span> : c.kind !== "app" ? <span className="db-tag">{KIND_LABEL[c.kind]}</span> : null}
                   </label>
                 ))}
+                {candidates.some((c) => c.kind !== "app") && (
+                  <button type="button" className="db-more" onClick={() => setShowAll((v) => !v)}>
+                    {showAll ? "Show only app databases" : `Show ${candidates.filter((c) => c.kind !== "app").length} more files (backups, test runs, system files)`}
+                  </button>
+                )}
               </fieldset>
             ) : (
               <div>

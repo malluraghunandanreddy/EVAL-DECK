@@ -9,6 +9,7 @@ import { checkLiveDb, LiveDbError } from "@/lib/scan/livedb";
 import { parseSqliteReport, SqliteReportError } from "@/lib/scan/sqlitereport";
 import { sshSqlite, SshCheckError } from "@/lib/scan/sshsqlite";
 import { getOrCreateSshKey } from "@/lib/sshkey";
+import { rankCandidates } from "@/lib/scan/dbcandidates";
 import { engineFromFindings } from "@/lib/scan/evaluate";
 import type { CodeFinding, Coverage, Framework, PolicyClaims, SchemaFinding } from "@/lib/types";
 import type { EngineSignals, DocConflict, DocPromise } from "@/lib/scan/engine";
@@ -73,8 +74,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       const r = await sshSqlite(login, body.dbPath);
       // First call (no path): list the SQLite files found so the customer can pick one.
       if ("candidates" in r) {
-        await logEvent("db_check", user.id, { scanId: scan.id, projectId: project.id, kind, step: "discover", found: r.candidates.length });
-        return NextResponse.json({ candidates: r.candidates });
+        const candidates = rankCandidates(r.candidates, [project.name, project.repoFullName?.split("/").pop() ?? ""]);
+        await logEvent("db_check", user.id, { scanId: scan.id, projectId: project.id, kind, step: "discover", found: candidates.length, apps: candidates.filter((c) => c.kind === "app").length });
+        return NextResponse.json({ candidates });
       }
       summary = parseSqliteReport(r.report);
     }

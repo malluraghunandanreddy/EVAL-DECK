@@ -14,15 +14,31 @@ export const SQLITE_REPORT_HEADER = "-- trilens sqlite v1";
 /** The read-only Python script (stdlib only). argv[1] is the database path. Also sent over SSH by sshsqlite.ts. */
 export const SQLITE_REPORT_SCRIPT = `import os, sqlite3, sys
 p = os.path.abspath(sys.argv[1]); st = os.stat(p)
+with open(p, "rb") as fh: head = fh.read(16)
+if head != b"SQLite format 3\\x00":
+    kind = "empty" if not head else "text" if head.lstrip()[:1] in (b"{", b"[", b"<", b"#") or head.isascii() else "encrypted"
+    print("NOT_SQLITE " + kind, file=sys.stderr); sys.exit(4)
 print("${SQLITE_REPORT_HEADER}")
 print(f"-- file {oct(st.st_mode & 0o777)[2:]} {st.st_size} {p}")
-c = sqlite3.connect(f"file:{p}?mode=ro", uri=True)
-names = [n for (n,) in c.execute("select name from sqlite_master where type='table' and name not like 'sqlite_%'")]
-for (s,) in c.execute("select sql from sqlite_master where type='table' and sql is not null and name not like 'sqlite_%'"):
-    print(s + ";")
-for n in names:
-    print(f"-- count {n} " + str(c.execute(f'select count(*) from "{n}"').fetchone()[0]))
-print("-- journal " + c.execute("pragma journal_mode").fetchone()[0])
+def opendb(lenient):
+    c = sqlite3.connect(f"file:{p}?mode=ro", uri=True)
+    # lenient: a schema written by a newer SQLite than the server's Python still lists its tables (nothing is written)
+    if lenient: c.execute("pragma writable_schema=on")
+    return c, [r for r in c.execute("select name, sql from sqlite_master where type='table' and name not like 'sqlite_%'")]
+try:
+    c, tables = opendb(False)
+except sqlite3.DatabaseError as e:
+    try:
+        c, tables = opendb(True)
+    except sqlite3.DatabaseError as e2:
+        print("SQLITE_ERR " + str(e2), file=sys.stderr); sys.exit(5)
+for (n, s) in tables:
+    if s: print(s + ";")
+for (n, s) in tables:
+    try: print(f"-- count {n} " + str(c.execute(f'select count(*) from "{n}"').fetchone()[0]))
+    except sqlite3.Error: pass
+try: print("-- journal " + c.execute("pragma journal_mode").fetchone()[0])
+except sqlite3.Error: pass
 d = os.path.dirname(p)
 for f in sorted(os.listdir(d)):
     q = os.path.join(d, f)

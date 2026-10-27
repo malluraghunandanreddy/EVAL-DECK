@@ -24,8 +24,9 @@ const COMMAND_MS = 25_000;
 const MAX_OUTPUT = 400_000;
 
 // Where apps keep their data; system folders are skipped so the search stays fast.
-const FIND_DBS = `find / \\( -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /usr -o -path /snap -o -path /boot -o -path /var/lib/docker -o -path /var/cache -o -path /root/.cache -o -path '*/node_modules' -o -path '*/.git' \\) -prune -o -type f \\( -name '*.db' -o -name '*.sqlite' -o -name '*.sqlite3' \\) -size +0 -print 2>/dev/null | grep -v -E '\\.(bak|backup)$|/(\\.cache|cache|tmp)/' | head -40`;
+const FIND_DBS = `find / \\( -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /usr -o -path /snap -o -path /boot -o -path /var/lib/docker -o -path /var/cache -o -path /root/.cache -o -path '*/node_modules' -o -path '*/.git' \\) -prune -o -type f \\( -name '*.db' -o -name '*.sqlite' -o -name '*.sqlite3' \\) -size +0 -print 2>/dev/null | grep -v -E '\\.(bak|backup)$|/(\\.cache|cache|tmp)/' | head -300`;
 
+const lastLine = (s: string) => s.trim().split("\n").pop()?.trim() ?? "";
 const quote = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
 
 function privateAddress(ip: string): boolean {
@@ -120,8 +121,11 @@ export async function sshSqlite(login: SshLogin, dbPath?: string | null): Promis
     if ((r.code !== null && r.code !== 0) || !r.out.includes("-- trilens sqlite")) {
       if (/No such file|FileNotFoundError/.test(r.err)) throw new SshCheckError("That database file doesn't exist on the server.");
       if (/Permission denied|PermissionError|unable to open/i.test(r.err)) throw new SshCheckError("This login can't read that database file. Use a login that can read the app's folder.");
-      if (/not a database|DatabaseError/i.test(r.err)) throw new SshCheckError("That file isn't a SQLite database.");
-      throw new SshCheckError("The check couldn't read that database.");
+      const notSqlite = r.err.match(/NOT_SQLITE (\w+)/)?.[1];
+      if (notSqlite === "encrypted") throw new SshCheckError("That file is encrypted (or isn't SQLite), so its tables can't be read. If it's the app's database, encryption is good for privacy; pick another file to check.");
+      if (notSqlite) throw new SshCheckError(notSqlite === "empty" ? "That file is empty." : "That file is a text file with a database name, not a SQLite database. Pick another file.");
+      const sqliteErr = r.err.match(/SQLITE_ERR (.+)/)?.[1] ?? lastLine(r.err);
+      throw new SshCheckError(`SQLite couldn't read that file${sqliteErr ? `: ${sqliteErr.slice(0, 160)}` : "."}`);
     }
     return { report: r.out };
   } finally {
