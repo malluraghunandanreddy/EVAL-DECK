@@ -11,8 +11,8 @@ import { parseTables } from "./schema";
  */
 export const SQLITE_REPORT_HEADER = "-- trilens sqlite v1";
 
-export const SQLITE_REPORT_COMMAND = `python3 - /path/to/your-app.db <<'PY'
-import os, sqlite3, sys
+/** The read-only Python script (stdlib only). argv[1] is the database path. Also sent over SSH by sshsqlite.ts. */
+export const SQLITE_REPORT_SCRIPT = `import os, sqlite3, sys
 p = os.path.abspath(sys.argv[1]); st = os.stat(p)
 print("${SQLITE_REPORT_HEADER}")
 print(f"-- file {oct(st.st_mode & 0o777)[2:]} {st.st_size} {p}")
@@ -28,7 +28,10 @@ for f in sorted(os.listdir(d)):
     q = os.path.join(d, f)
     if q != p and os.path.isfile(q) and any(x in f.lower() for x in (".db", ".sqlite", ".bak", "backup", ".dump")):
         print(f"-- sibling {oct(os.stat(q).st_mode & 0o777)[2:]} {f}")
-PY`;
+`;
+
+export const SQLITE_REPORT_COMMAND = `python3 - /path/to/your-app.db <<'PY'
+${SQLITE_REPORT_SCRIPT}PY`;
 
 const WEB_ROOT = /\/(public_html|htdocs|www|html|public|static|wwwroot)(\/|$)/i;
 const TTL_COL = /^(expires?_?at|ttl|expiry|retain_?until|delete_?after)$/i;

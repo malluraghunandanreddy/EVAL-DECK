@@ -7,6 +7,7 @@ import { ownedScan } from "@/lib/agent/access";
 import { scanUnlocked } from "@/lib/entitlements";
 import { checkLiveDb, LiveDbError } from "@/lib/scan/livedb";
 import { parseSqliteReport, SqliteReportError } from "@/lib/scan/sqlitereport";
+import { sshSqlite, SshCheckError } from "@/lib/scan/sshsqlite";
 import { engineFromFindings } from "@/lib/scan/evaluate";
 import type { CodeFinding, Coverage, Framework, PolicyClaims, SchemaFinding } from "@/lib/types";
 import type { EngineSignals, DocConflict, DocPromise } from "@/lib/scan/engine";
@@ -19,6 +20,18 @@ const Body = z.union([
   z.object({ url: z.string().min(12).max(2000) }),
   // SQLite on a server: the structure report printed by SQLITE_REPORT_COMMAND (no row values).
   z.object({ sqliteReport: z.string().min(20).max(400_000) }),
+  // SQLite on a server, automatic: TriLens logs in over SSH. Used for this request only, never stored or logged.
+  z.object({
+    ssh: z.object({
+      host: z.string().trim().min(3).max(255),
+      port: z.coerce.number().int().min(1).max(65535).optional(),
+      username: z.string().trim().min(1).max(64),
+      password: z.string().max(512).optional(),
+      privateKey: z.string().max(20_000).optional(),
+      passphrase: z.string().max(512).optional(),
+    }),
+    dbPath: z.string().max(1024).optional().nullable(),
+  }),
 ]);
 
 // POST /api/scans/:id/db { url }  (unlocked report or Pro monthly)
@@ -42,11 +55,22 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
 
   let summary;
-  const kind = "url" in body ? "postgres" : "sqlite";
+  const kind = "url" in body ? "postgres" : "ssh" in body ? "sqlite_ssh" : "sqlite";
   try {
-    summary = "url" in body ? await checkLiveDb(body.url) : parseSqliteReport(body.sqliteReport);
+    if ("url" in body) summary = await checkLiveDb(body.url);
+    else if ("sqliteReport" in body) summary = parseSqliteReport(body.sqliteReport);
+    else {
+      const r = await sshSqlite(body.ssh, body.dbPath);
+      // First call (no path): list the SQLite files found so the customer can pick one.
+      if ("candidates" in r) {
+        await logEvent("db_check", user.id, { scanId: scan.id, projectId: project.id, kind, step: "discover", found: r.candidates.length });
+        return NextResponse.json({ candidates: r.candidates });
+      }
+      summary = parseSqliteReport(r.report);
+    }
   } catch (err) {
-    const msg = err instanceof LiveDbError || err instanceof SqliteReportError ? err.message : "Database check failed";
+    const msg = err instanceof LiveDbError || err instanceof SqliteReportError || err instanceof SshCheckError ? err.message : "Database check failed";
+    if (!(err instanceof SshCheckError || err instanceof LiveDbError || err instanceof SqliteReportError)) console.error("db check failed", kind, (err as Error).message?.slice(0, 200));
     await logEvent("db_check", user.id, { scanId: scan.id, projectId: project.id, kind, ok: false, error: msg.slice(0, 200) });
     return NextResponse.json({ error: msg }, { status: 422 });
   }

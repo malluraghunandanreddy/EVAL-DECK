@@ -26,3 +26,7 @@
 .ob-seg button[aria-pressed="true"] { background: var(--text); color: var(--bg); }
 .ob-remove { border: 0; background: none; color: var(--bad); font: 600 .82rem/1 var(--font-body); cursor: pointer; }
 .ob-add select { width: auto; }
+.db-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, .7fr) minmax(0, 1.3fr); gap: 0 12px; }
+@media (max-width: 640px) { .db-grid { grid-template-columns: minmax(0, 1fr); } }
+.db-pick { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; display: grid; gap: 8px; margin: 0; }
+.db-pick legend { font-weight: 650; padding: 0 4px; }

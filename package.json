@@ -19,6 +19,7 @@
     "postgres": "^3.4.7",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "ssh2": "^1.16.0",
     "tar": "^7.4.3",
     "zod": "^3.25.76"
   },
@@ -26,6 +27,7 @@
     "@types/node": "^22.18.0",
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
+    "@types/ssh2": "^1.15.6",
     "drizzle-kit": "^0.31.4",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2"

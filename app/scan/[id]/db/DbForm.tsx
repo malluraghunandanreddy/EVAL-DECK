@@ -8,6 +8,17 @@ export default function DbForm({ scanId, checked, sqliteCommand }: { scanId: str
   const [url, setUrl] = useState("");
   const [report, setReport] = useState("");
   const [copied, setCopied] = useState(false);
+  // SQLite: "auto" logs in over SSH from TriLens; "manual" is the run-a-command-and-paste fallback.
+  const [sqliteWay, setSqliteWay] = useState<"auto" | "manual">("auto");
+  const [host, setHost] = useState("");
+  const [port, setPort] = useState("22");
+  const [username, setUsername] = useState("root");
+  const [authType, setAuthType] = useState<"password" | "key">("password");
+  const [password, setPassword] = useState("");
+  const [privateKey, setPrivateKey] = useState("");
+  const [passphrase, setPassphrase] = useState("");
+  const [candidates, setCandidates] = useState<string[] | null>(null);
+  const [dbPath, setDbPath] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
@@ -16,12 +27,23 @@ export default function DbForm({ scanId, checked, sqliteCommand }: { scanId: str
     e.preventDefault();
     setBusy(true); setError(null); setResult(null);
     try {
-      const r = await fetch(`/api/scans/${scanId}/db`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(mode === "postgres" ? { url } : { sqliteReport: report }) });
+      const ssh = { host, port: Number(port) || 22, username, ...(authType === "password" ? { password } : { privateKey, passphrase: passphrase || undefined }) };
+      const payload = mode === "postgres" ? { url } : sqliteWay === "manual" ? { sqliteReport: report } : { ssh, dbPath: candidates ? dbPath || null : null };
+      const r = await fetch(`/api/scans/${scanId}/db`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const data = await r.json();
       if (!r.ok) { setError(data.error ?? `HTTP ${r.status}`); return; }
+      if (Array.isArray(data.candidates)) {
+        // Step 1 of the automatic check: show the SQLite files found on the server.
+        setCandidates(data.candidates);
+        setDbPath(data.candidates[0] ?? "");
+        return;
+      }
       setResult(data as Result);
       setUrl("");
       setReport("");
+      setPassword("");
+      setPrivateKey("");
+      setPassphrase("");
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -61,7 +83,82 @@ export default function DbForm({ scanId, checked, sqliteCommand }: { scanId: str
         <button type="button" aria-pressed={mode === "postgres"} onClick={() => setMode("postgres")}>Postgres / Supabase</button>
         <button type="button" aria-pressed={mode === "sqlite"} onClick={() => setMode("sqlite")}>SQLite on a server (VPS)</button>
       </div>
-      {mode === "sqlite" ? (
+      {mode === "sqlite" && (
+        <div className="ob-seg" role="group" aria-label="How to check SQLite" style={{ justifySelf: "start" }}>
+          <button type="button" aria-pressed={sqliteWay === "auto"} onClick={() => { setSqliteWay("auto"); setError(null); }}>Connect to my server</button>
+          <button type="button" aria-pressed={sqliteWay === "manual"} onClick={() => { setSqliteWay("manual"); setError(null); }}>Run a command myself</button>
+        </div>
+      )}
+      {mode === "sqlite" && sqliteWay === "auto" ? (
+        <>
+          <p style={{ margin: 0, fontSize: 14 }}>
+            TriLens logs in to your server, finds your SQLite database and reads its <strong>structure only</strong>: tables, columns,
+            row counts and file permissions. It opens the database read-only, changes nothing, never reads customer records, and
+            forgets your login as soon as the check finishes.
+          </p>
+          <div className="db-grid">
+            <div>
+              <label htmlFor="ssh-host">Server IP address</label>
+              <input id="ssh-host" value={host} onChange={(e) => { setHost(e.target.value); setCandidates(null); }} placeholder="e.g. 82.25.110.14" autoComplete="off" spellCheck={false} required />
+            </div>
+            <div>
+              <label htmlFor="ssh-port">SSH port</label>
+              <input id="ssh-port" value={port} onChange={(e) => setPort(e.target.value.replace(/\D/g, ""))} inputMode="numeric" />
+            </div>
+            <div>
+              <label htmlFor="ssh-user">Username</label>
+              <input id="ssh-user" value={username} onChange={(e) => { setUsername(e.target.value); setCandidates(null); }} autoComplete="off" spellCheck={false} required />
+            </div>
+          </div>
+          <div className="ob-seg" role="group" aria-label="Login method" style={{ justifySelf: "start" }}>
+            <button type="button" aria-pressed={authType === "password"} onClick={() => setAuthType("password")}>Password</button>
+            <button type="button" aria-pressed={authType === "key"} onClick={() => setAuthType("key")}>SSH key</button>
+          </div>
+          {authType === "password" ? (
+            <div>
+              <label htmlFor="ssh-pass">Password</label>
+              <input id="ssh-pass" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="off" required />
+            </div>
+          ) : (
+            <>
+              <label htmlFor="ssh-key">Private key</label>
+              <textarea id="ssh-key" rows={5} value={privateKey} onChange={(e) => setPrivateKey(e.target.value)} spellCheck={false} placeholder="-----BEGIN OPENSSH PRIVATE KEY-----" style={{ fontFamily: "var(--font-mono)", fontSize: 12 }} required />
+              <label htmlFor="ssh-phrase">Key passphrase (if it has one)</label>
+              <input id="ssh-phrase" type="password" value={passphrase} onChange={(e) => setPassphrase(e.target.value)} autoComplete="off" />
+            </>
+          )}
+          <details style={{ fontSize: 14 }}>
+            <summary style={{ cursor: "pointer" }}><strong>Where to find these on Hostinger</strong></summary>
+            <ol style={{ margin: "8px 0 0", paddingLeft: 20 }}>
+              <li>Log in to <a href="https://hpanel.hostinger.com" target="_blank" rel="noreferrer">hpanel.hostinger.com</a> and open <strong>VPS</strong>, then your server.</li>
+              <li><strong>Overview</strong> shows the IP address and the SSH username (usually <code>root</code>). Port is 22.</li>
+              <li>Forgot the password? Use <strong>Settings → Change root password</strong> (or <strong>SSH keys</strong> to add a key).</li>
+              <li>Safer: create a login that can only read the app folder and use that instead of <code>root</code>.</li>
+            </ol>
+          </details>
+          {candidates && (
+            candidates.length ? (
+              <fieldset className="db-pick">
+                <legend>Databases found on your server. Pick the one your app uses:</legend>
+                {candidates.map((c) => (
+                  <label key={c} className="ob-check" style={{ display: "flex", fontFamily: "var(--font-mono)", fontSize: 13 }}>
+                    <input type="radio" name="dbpath" checked={dbPath === c} onChange={() => setDbPath(c)} /> {c}
+                  </label>
+                ))}
+              </fieldset>
+            ) : (
+              <div>
+                <p className="notice" style={{ margin: "0 0 8px" }}>No SQLite files were found automatically. If you know where it is, type the full path:</p>
+                <input value={dbPath} onChange={(e) => setDbPath(e.target.value)} placeholder="/var/www/yourapp/data/app.db" spellCheck={false} style={{ fontFamily: "var(--font-mono)" }} />
+              </div>
+            )
+          )}
+          {error && <p style={{ color: "var(--bad)", margin: 0 }}>{error}</p>}
+          <button className="btn" type="submit" disabled={busy || !host || !username || (authType === "password" ? !password : !privateKey) || (candidates !== null && !dbPath)}>
+            {busy ? (candidates ? "Checking the database…" : "Connecting and searching…") : candidates ? "Check this database" : "Connect and find databases"}
+          </button>
+        </>
+      ) : mode === "sqlite" ? (
         <>
           <p style={{ margin: 0, fontSize: 14 }}>
             SQLite is a file on your server (for example a Hostinger VPS), so TriLens can&apos;t connect to it. Run this on the server
