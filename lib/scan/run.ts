@@ -6,6 +6,7 @@ import { analyzeDirectory } from "./analyze";
 import { ingestGithub, ingestZip, type Ingested } from "./ingest";
 import { extractClaims, fetchPolicyText, findPolicyInRepo } from "./policy";
 import { readRepo } from "./files";
+import { readProjectDocuments } from "./documents";
 
 export { analyzeDirectory } from "./analyze";
 export type { AnalyzeOptions, AnalyzeResult } from "./analyze";
@@ -43,13 +44,23 @@ export async function runScan(scanId: string): Promise<void> {
 
     const frameworks = (project.frameworks as Framework[]).length ? (project.frameworks as Framework[]) : (["GDPR"] as Framework[]);
 
-    // Policy: project URL first, else a PRIVACY.* file in the repo; Policy Reader agent with keyword fallback.
-    let policyText = project.policyUrl ? await fetchPolicyText(project.policyUrl) : null;
-    if (!policyText) policyText = findPolicyInRepo(readRepo(ingested.dir));
-    const { claims, source: claimsSource } = await extractClaims(policyText);
+    // Legal documents attached to the project (privacy policies, terms, engagement terms, NDA, DPA) come first.
+    // Without them: project policy URL, else a PRIVACY.* file in the repo. Agent with keyword fallback either way.
+    const docs = await readProjectDocuments(project.id);
+    let policyText: string | null = null;
+    let claims;
+    let claimsSource: string;
+    if (docs?.claims) {
+      claims = docs.claims;
+      claimsSource = docs.claimsSource;
+    } else {
+      policyText = project.policyUrl ? await fetchPolicyText(project.policyUrl) : null;
+      if (!policyText) policyText = findPolicyInRepo(readRepo(ingested.dir));
+      ({ claims, source: claimsSource } = await extractClaims(policyText));
+    }
 
     // Live DB findings are added later by the Pro DB check (T9), which re-runs engineFromFindings.
-    const r = await analyzeDirectory(ingested.dir, { frameworks, policyText, claims });
+    const r = await analyzeDirectory(ingested.dir, { frameworks, policyText, claims, docPromises: docs?.promises, docConflicts: docs?.conflicts });
 
     await db.update(schema.scans).set({
       status: "done",
@@ -60,6 +71,7 @@ export async function runScan(scanId: string): Promise<void> {
       dbFindings: null,
       gaps: r.gaps,
       checklist: r.checklist,
+      documents: docs ? { list: docs.documents, conflicts: docs.conflicts, promises: docs.promises } : null,
       // signals kept alongside coverage so T9 can re-run the engine without the repo
       coverage: { ...r.coverage, signals: r.signals },
       finishedAt: new Date(),
@@ -74,6 +86,7 @@ export async function runScan(scanId: string): Promise<void> {
     await logEvent("scan_done", project.userId, {
       scanId, projectId: project.id, sha: ingested.sha, ms: Date.now() - started, gaps: r.gaps.length, todo,
       codeFindings: r.codeFindings.length, schemaFindings: r.schemaFindings.length, claimsSource, frameworks,
+      documents: docs?.documents.length ?? 0, documentsRead: docs?.documents.filter((d) => d.read).length ?? 0, docConflicts: docs?.conflicts.length ?? 0,
     });
   } catch (err) {
     const raw = (err as Error).message ?? "Scan failed";

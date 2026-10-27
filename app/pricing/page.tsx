@@ -11,6 +11,9 @@ type Cell = string | true | false;
 const ROWS: { label: string; free: Cell; single: Cell; monthly: Cell }[] = [
   { label: "Scan your GitHub repo (public and private)", free: true, single: true, monthly: true },
   { label: "DPDP, GDPR and CCPA checklist", free: true, single: true, monthly: true },
+  { label: "SOC 2 control checks from your code", free: true, single: true, monthly: true },
+  { label: "Privacy policy, terms, engagement terms, NDA and DPA checked against code and each other", free: true, single: true, monthly: true },
+  { label: "Repos per audit", free: "Up to 3", single: "Up to 3", monthly: "Up to 10" },
   { label: "Every gap with its evidence and law reference", free: true, single: true, monthly: true },
   { label: "How to fix each gap", free: false, single: "For one report", monthly: "Every report" },
   { label: "Privacy policy and terms draft", free: "First 2 sections", single: "Full, for one report", monthly: "Full, every report" },

@@ -15,6 +15,8 @@ const SYSTEM =
 const PROFILE: Record<string, { effort: "low" | "medium"; maxTokens: number }> = {
   extract_claims: { effort: "low", maxTokens: 4_000 },
   summarise_findings: { effort: "low", maxTokens: 4_000 },
+  extract_doc_promises: { effort: "low", maxTokens: 4_000 },
+  compare_documents: { effort: "medium", maxTokens: 6_000 },
   draft_policy: { effort: "medium", maxTokens: 16_000 },
   update_policy: { effort: "medium", maxTokens: 16_000 },
 };

@@ -45,6 +45,25 @@ ${CLAIMS_JSON}`,
   summarise_findings: `Action "summarise_findings". inputs.findings is a list of compliance findings.
 Return ONLY { "summaries": [{ "index": number, "summary": string }] } with one plain-English line (max 20 words) per finding.`,
 
+  extract_doc_promises: `Action "extract_doc_promises". inputs.document_text is a legal document (privacy policy, terms, engagement
+terms, NDA or DPA) called inputs.document_title. List every concrete promise it makes about data or confidential information.
+Only these kinds: "retention" (how long data is kept), "deletion" (when or how data is deleted or returned), "sharing"
+(data IS shared with or disclosed to named recipients or categories such as hosting, analytics or AI providers), "no_sharing"
+(data is not shared, sold or disclosed to third parties), "confidentiality" (who may access confidential or client information),
+"storage_location" (where data is stored or processed). Quote or closely paraphrase the document; do not invent promises.
+Return ONLY { "promises": [{ "kind": string, "text": string }] } with at most 12 items, no prose, no code fences.`,
+
+  compare_documents: `Action "compare_documents". inputs.documents lists several legal documents from the same company, each with the
+data promises it makes. The documents cover the same product, so customer or client data handled by the product falls under all
+of them. Find places where two documents contradict each other: different retention or deletion periods for data that could be
+the same (for example account data kept 12 months vs client information destroyed within 30 days), one document says data or
+confidential information is never disclosed to third parties while another shares it with providers (hosting, analytics, AI),
+different storage locations, or confidentiality terms that the other document breaks. Ignore differences in wording that mean
+the same thing. Do not report a document for missing a topic.
+severity: "high" if a customer could be misled about sharing or deletion, else "medium"; "low" for minor wording.
+Return ONLY { "conflicts": [{ "title": string, "docs": [string, string], "detail": string, "severity": string }] }
+with at most 6 items. title is one plain sentence naming both documents. Return { "conflicts": [] } if they agree.`,
+
   draft_policy: `Action "draft_policy". Draft a privacy policy and terms of service from the automated scan report in inputs:
 { scan_id, policy_version_id, app_name, frameworks, markets, gaps (with fixes), code_findings, schema_findings,
   db_findings, policy_claims, existing_policy_md, baseline_policy_md, baseline_terms_md }.

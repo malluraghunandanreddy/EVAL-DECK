@@ -2,6 +2,7 @@ import { buildChecklist } from "../checklist";
 import type { ChecklistItem, CodeFinding, Coverage, DbFinding, Framework, Gap, PolicyClaims, SchemaFinding } from "../types";
 import { detectCode, detectDbEnvHints, detectSignals } from "./detect";
 import { engineFromFindings } from "./evaluate";
+import type { DocConflict, DocPromise } from "./engine";
 import { readRepo } from "./files";
 import { findPolicyInRepo, keywordClaims } from "./policy";
 import { detectSchema } from "./schema";
@@ -13,6 +14,8 @@ export type AnalyzeOptions = {
   /** Pre-extracted claims (e.g. from the Policy Reader agent); overrides policyText. */
   claims?: PolicyClaims;
   dbFindings?: DbFinding[] | null;
+  docPromises?: DocPromise[];
+  docConflicts?: DocConflict[];
 };
 
 export type AnalyzeResult = {
@@ -39,6 +42,7 @@ export async function analyzeDirectory(dir: string, opts: AnalyzeOptions): Promi
   const coverage: Coverage = { code: true, schemaFiles: schemaFiles > 0, liveDb: !!opts.dbFindings };
   const { gaps, checklist } = engineFromFindings({
     frameworks: opts.frameworks, codeFindings, schemaFindings, dbFindings: opts.dbFindings ?? null, claims: policyClaims, signals, coverage,
+    docPromises: opts.docPromises, docConflicts: opts.docConflicts,
   });
   return { codeFindings, schemaFindings, policyClaims, policyText, gaps, checklist, coverage, dbEnvHints, signals };
 }

@@ -219,5 +219,40 @@ export function detectSignals(files: RepoFile[]) {
     consentCaptured: code.some((f) => /consent/i.test(f.text)),
     doNotSellLink: files.some((f) => /do[\s-]not[\s-]sell/i.test(f.text) && !/privacy|policy/i.test(f.rel)),
     hasRetentionJob: files.some((f) => /cron\.schedule|pg_cron|expireAfterSeconds|setInterval\([^)]*delete|@daily|retention_?job/i.test(f.text)),
+    hasCi: files.some((f) => /^\.github\/workflows\/[^/]+\.ya?ml$|^\.gitlab-ci\.yml$|^\.circleci\/|^bitbucket-pipelines\.yml$|^azure-pipelines\.yml$/.test(f.rel)),
+    hasTests: files.some((f) => /\.(test|spec)\.[cm]?[jt]sx?$|(^|\/)test_[^/]+\.py$|_test\.py$/.test(f.rel))
+      || files.some((f) => /(^|\/)package\.json$/.test(f.rel) && /"test"\s*:\s*"(?!echo \\"Error: no test)/.test(f.text)),
+    secrets: detectSecrets(files),
   };
+}
+
+const SECRET_PATTERNS: [RegExp, string][] = [
+  [/AKIA[0-9A-Z]{16}/, "AWS access key"],
+  [/-----BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/, "Private key"],
+  [/\bsk_live_[0-9a-zA-Z]{16,}/, "Stripe live secret key"],
+  [/\bsk-ant-[A-Za-z0-9_-]{20,}/, "Anthropic API key"],
+  [/\bsk-(proj-)?[A-Za-z0-9]{32,}/, "OpenAI API key"],
+  [/\bgh[pousr]_[A-Za-z0-9]{36,}/, "GitHub token"],
+  [/\bxox[baprs]-[A-Za-z0-9-]{10,}/, "Slack token"],
+  [/postgres(ql)?:\/\/[^:\s"'`]+:[^@\s"'`$]{6,}@(?!localhost|127\.0\.0\.1|host|db\b)/, "Database URL with password"],
+];
+
+/** Hard-coded credentials and committed .env files. Example/sample env files are ignored. */
+function detectSecrets(files: RepoFile[]): { file: string; line: number; kind: string }[] {
+  const out: { file: string; line: number; kind: string }[] = [];
+  for (const f of files) {
+    if (/\.(example|sample|template|dist)$|example|sample/i.test(f.rel)) continue;
+    const base = f.rel.split("/").pop() ?? "";
+    if (/^\.env(\.[\w-]+)?$/.test(base) && /^[A-Z0-9_]+=\S{8,}/m.test(f.text)) {
+      out.push({ file: f.rel, line: 1, kind: "Environment file with values" });
+      continue;
+    }
+    const lines = f.text.split("\n");
+    for (let i = 0; i < lines.length && out.length < 20; i++) {
+      for (const [re, kind] of SECRET_PATTERNS) {
+        if (re.test(lines[i])) { out.push({ file: f.rel, line: i + 1, kind }); break; }
+      }
+    }
+  }
+  return out;
 }

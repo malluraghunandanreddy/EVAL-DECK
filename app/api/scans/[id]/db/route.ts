@@ -8,7 +8,7 @@ import { scanUnlocked } from "@/lib/entitlements";
 import { checkLiveDb, LiveDbError } from "@/lib/scan/livedb";
 import { engineFromFindings } from "@/lib/scan/evaluate";
 import type { CodeFinding, Coverage, Framework, PolicyClaims, SchemaFinding } from "@/lib/types";
-import type { EngineSignals } from "@/lib/scan/engine";
+import type { EngineSignals, DocConflict, DocPromise } from "@/lib/scan/engine";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,6 +54,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     claims: (scan.policyClaims ?? { collected: [], purposes: [], thirdParties: [], retention: null, crossBorder: null, noPolicy: true }) as PolicyClaims,
     signals: cov.signals,
     coverage: { code: !!cov.code, schemaFiles: !!cov.schemaFiles, liveDb: true },
+    // keep the legal-document checks from the original scan
+    docPromises: (scan.documents as { promises?: DocPromise[] } | null)?.promises,
+    docConflicts: (scan.documents as { conflicts?: DocConflict[] } | null)?.conflicts,
   });
   await db.update(schema.scans)
     .set({ dbFindings: summary.findings, gaps, checklist, coverage: { ...cov, liveDb: true } })

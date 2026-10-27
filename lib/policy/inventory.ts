@@ -1,5 +1,6 @@
 import type { CodeFinding, DbFinding, Framework, Gap, PolicyClaims, SchemaFinding } from "../types";
 import type { Project, Scan } from "../db/schema";
+import { FRAMEWORK_ORDER } from "../types";
 
 // What the app collects and who receives it, computed from a scan's findings.
 // The widget, hosted pages and the policy generator all read from this.
@@ -129,8 +130,7 @@ export function computeInventory(parts: Pick<ScanParts, "codeFindings" | "schema
 }
 
 export function projectFrameworks(project: Pick<Project, "frameworks">): Framework[] {
-  const order: Framework[] = ["DPDP", "GDPR", "CCPA"];
   const fw = (project.frameworks ?? []) as string[];
-  const list = order.filter((f) => fw.includes(f));
-  return list.length ? list : ["GDPR"];
+  const list = FRAMEWORK_ORDER.filter((f) => fw.includes(f));
+  return list.some((f) => f !== "SOC2") ? list : ["GDPR", ...list];
 }

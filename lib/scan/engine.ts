@@ -2,7 +2,15 @@ import type { CodeFinding, DbFinding, Framework, Gap, LawRef, PolicyClaims, Sche
 import { SDK_CATALOG } from "./catalog";
 import { classifyText, DATA_TYPE_LABEL } from "./pii";
 
-export type EngineSignals = { consentCaptured: boolean; doNotSellLink: boolean; hasRetentionJob: boolean };
+export type EngineSignals = {
+  consentCaptured: boolean; doNotSellLink: boolean; hasRetentionJob: boolean;
+  hasCi?: boolean; hasTests?: boolean;
+  secrets?: { file: string; line: number; kind: string }[];
+};
+
+/** A data promise made by one of the project's legal documents (privacy policy, terms, NDA, ...). */
+export type DocPromise = { doc: string; kind: "retention" | "deletion" | "sharing" | "no_sharing" | "confidentiality" | "storage_location"; text: string };
+export type DocConflict = { title: string; docs: string[]; detail: string; severity: "high" | "medium" | "low" };
 
 export type EngineInput = {
   frameworks: Framework[];
@@ -11,6 +19,9 @@ export type EngineInput = {
   dbFindings?: DbFinding[] | null;
   claims: PolicyClaims;
   signals?: Partial<EngineSignals>;
+  /** Promises extracted from every legal document; checked against code and against each other. */
+  docPromises?: DocPromise[];
+  docConflicts?: DocConflict[];
 };
 
 // Law citations, short text in plain English.
@@ -35,6 +46,16 @@ const LAW = {
   CCPA_105: { regime: "CCPA", ref: "Cal. Civ. Code 1798.105", text: "Consumers have the right to request deletion of their personal information." },
   CCPA_115: { regime: "CCPA", ref: "Cal. Civ. Code 1798.115", text: "Consumers have the right to know the categories of third parties personal information is sold or shared with." },
   CCPA_120: { regime: "CCPA", ref: "Cal. Civ. Code 1798.120", text: "Consumers can opt out of sale or sharing; a 'Do Not Sell or Share' link is required." },
+  SOC2_P1: { regime: "SOC2", ref: "TSC P1.1", text: "The entity provides notice about its privacy practices that matches how it collects, uses, retains and discloses personal information." },
+  SOC2_P2: { regime: "SOC2", ref: "TSC P2.1", text: "Choices about collection, use and disclosure are communicated and consent is obtained." },
+  SOC2_P3: { regime: "SOC2", ref: "TSC P3.1", text: "Personal information is collected only for the purposes identified in the notice." },
+  SOC2_P4: { regime: "SOC2", ref: "TSC P4.3", text: "Personal information is disposed of securely once no longer needed." },
+  SOC2_C1: { regime: "SOC2", ref: "TSC C1.1, C1.2", text: "Confidential information is protected and disposed of as committed to customers." },
+  SOC2_CC2: { regime: "SOC2", ref: "TSC CC2.3", text: "Commitments to external parties are communicated consistently." },
+  SOC2_CC6: { regime: "SOC2", ref: "TSC CC6.1", text: "Logical access to information assets is restricted, including protection of credentials." },
+  SOC2_CC7: { regime: "SOC2", ref: "TSC CC7.2", text: "System components are monitored without exposing confidential data in logs." },
+  SOC2_CC8: { regime: "SOC2", ref: "TSC CC8.1", text: "Changes are authorised, tested and approved before release." },
+  SOC2_CC9: { regime: "SOC2", ref: "TSC CC9.2", text: "Risks from vendors and business partners are assessed and managed." },
 } satisfies Record<string, LawRef>;
 
 type RuleOut = Omit<Gap, "frameworks" | "law" | "checklistIds"> & {
@@ -70,11 +91,12 @@ export function runEngine(input: EngineInput): Gap[] {
       DPDP: [[LAW.DPDP_5], ["dpdp_notice_items", "dpdp_notice_purposes", "dpdp_consent"]],
       GDPR: [[LAW.GDPR_13, LAW.GDPR_6], ["gdpr_lawful_basis", "gdpr_categories"]],
       CCPA: [[LAW.CCPA_100], ["ccpa_notice"]],
+      SOC2: [[LAW.SOC2_P1], ["soc2_privacy_notice"]],
     };
     for (const fw of frameworks) {
       out.push({ id: `no_policy:${fw.toLowerCase()}`, severity: "high", title: `No privacy notice found (${fw} requires one before processing)`, layer: "policy_vs_code",
         evidence: [], law: { [fw]: per[fw][0] }, checklist: { [fw]: per[fw][1] },
-        fix: "Publish a privacy notice listing what you collect, why, who receives it and how long you keep it, and link it at sign-up. PolicyDrift can draft one from this scan." });
+        fix: "Publish a privacy notice listing what you collect, why, who receives it and how long you keep it, and link it at sign-up. TriLens can draft one from this scan." });
     }
   }
 
@@ -92,8 +114,8 @@ export function runEngine(input: EngineInput): Gap[] {
     const sensitive = ["chat_history", "aadhaar", "pan", "payment", "location", "phone"].includes(d);
     out.push({ id: `undisclosed_data:${d}`, severity: sensitive ? "high" : "medium", title: `Collects ${label(d)} but ${policyWord} doesn't mention it`,
       layer: evidence.some((e) => e.table) && !evidence.some((e) => !e.table) ? "policy_vs_storage" : "policy_vs_code", evidence,
-      law: { DPDP: [LAW.DPDP_5], GDPR: [LAW.GDPR_13], CCPA: [LAW.CCPA_100] },
-      checklist: { DPDP: ["dpdp_notice_items", "dpdp_notice_purposes"], GDPR: ["gdpr_categories", "gdpr_lawful_basis"], CCPA: ["ccpa_notice"] },
+      law: { DPDP: [LAW.DPDP_5], GDPR: [LAW.GDPR_13], CCPA: [LAW.CCPA_100], SOC2: [LAW.SOC2_P1] },
+      checklist: { DPDP: ["dpdp_notice_items", "dpdp_notice_purposes"], GDPR: ["gdpr_categories", "gdpr_lawful_basis"], CCPA: ["ccpa_notice"], SOC2: ["soc2_privacy_notice"] },
       fix: `Add "${label(d)}" to the data you collect in your notice, with its purpose and lawful basis, or stop collecting it.` });
   }
 
@@ -115,15 +137,15 @@ export function runEngine(input: EngineInput): Gap[] {
     if (!disclosedVendor(claims, sdk.vendor)) {
       out.push({ id: `undisclosed_vendor:${id}`, severity: sdk.category === "llm" || sdk.category === "analytics" ? "high" : "medium",
         title: `${sdk.vendor} receives user data (${types.map(label).join(", ") || "usage data"}) but isn't disclosed`, layer: "policy_vs_code", evidence,
-        law: { DPDP: [LAW.DPDP_5, LAW.DPDP_8_2], GDPR: [LAW.GDPR_13_1_E], CCPA: [LAW.CCPA_115] },
-        checklist: { DPDP: ["dpdp_third_parties"], GDPR: ["gdpr_categories"], CCPA: ["ccpa_third_parties"] },
+        law: { DPDP: [LAW.DPDP_5, LAW.DPDP_8_2], GDPR: [LAW.GDPR_13_1_E], CCPA: [LAW.CCPA_115], SOC2: [LAW.SOC2_CC9, LAW.SOC2_P1] },
+        checklist: { DPDP: ["dpdp_third_parties"], GDPR: ["gdpr_categories"], CCPA: ["ccpa_third_parties"], SOC2: ["soc2_vendor_mgmt", "soc2_privacy_notice"] },
         fix: `Name ${sdk.vendor} as a processor in your notice, saying what it receives (${types.map(label).join(", ") || "usage data"}) and why.` });
     }
     // Rule 4: cross-border without a transfer statement
     if ((sdk.region === "us" || sdk.region === "unknown") && !claims.crossBorder) {
       out.push({ id: `cross_border:${id}`, severity: "medium", title: `Data goes to ${sdk.vendor} (${sdk.region === "us" ? "US" : "region unknown"}) with no transfer disclosure`,
         layer: "policy_vs_code", evidence: evidence.slice(0, 1),
-        law: { DPDP: [LAW.DPDP_16], GDPR: [LAW.GDPR_44] }, checklist: { DPDP: ["dpdp_transfers"], GDPR: ["gdpr_transfers"] },
+        law: { DPDP: [LAW.DPDP_16], GDPR: [LAW.GDPR_44], SOC2: [LAW.SOC2_CC9] }, checklist: { DPDP: ["dpdp_transfers"], GDPR: ["gdpr_transfers"], SOC2: ["soc2_vendor_mgmt"] },
         fix: `Add a "Where your data is processed" section naming ${sdk.region === "us" ? "the United States" : "the countries"} for ${sdk.vendor}, and the safeguard used (SCCs / DPA).` });
     }
     // Rule 7: analytics/ad SDKs sharing device/IP -> CCPA do-not-sell-or-share
@@ -143,7 +165,7 @@ export function runEngine(input: EngineInput): Gap[] {
     out.push({ id: `llm_minimisation:${slug(vendor)}`, severity: "high",
       title: history ? `Full chat history${types.length > 1 ? " and personal data" : ""} sent to ${vendor} on every call` : `Personal data (${types.map(label).join(", ")}) sent to ${vendor}`,
       layer: "policy_vs_code", evidence: fs.slice(0, 3).map(ev),
-      law: { DPDP: [LAW.DPDP_6], GDPR: [LAW.GDPR_5_1_B, LAW.GDPR_5_1_C] }, checklist: { DPDP: ["dpdp_ai_purpose"], GDPR: ["gdpr_minimisation_ai"] },
+      law: { DPDP: [LAW.DPDP_6], GDPR: [LAW.GDPR_5_1_B, LAW.GDPR_5_1_C], SOC2: [LAW.SOC2_P3, LAW.SOC2_C1] }, checklist: { DPDP: ["dpdp_ai_purpose"], GDPR: ["gdpr_minimisation_ai"], SOC2: ["soc2_minimisation"] },
       fix: `Send ${vendor} only the current message (or a short window), strip phone/email/IP before the call, and disclose ${vendor} and this purpose in the notice.` });
   }
 
@@ -153,15 +175,15 @@ export function runEngine(input: EngineInput): Gap[] {
     if (f.kind === "no_delete_path") {
       out.push({ id: `no_delete_path:${slug(f.table)}`, severity: "high", title: `No deletion path for personal data in ${f.table} (${f.dataTypes.map(label).join(", ")})`,
         layer: "code_vs_storage", evidence: [loc],
-        law: { DPDP: [LAW.DPDP_8_7], GDPR: [LAW.GDPR_17], CCPA: [LAW.CCPA_105] },
-        checklist: { DPDP: ["dpdp_erasure"], GDPR: ["gdpr_erasure"], CCPA: ["ccpa_deletion"] },
+        law: { DPDP: [LAW.DPDP_8_7], GDPR: [LAW.GDPR_17], CCPA: [LAW.CCPA_105], SOC2: [LAW.SOC2_P4] },
+        checklist: { DPDP: ["dpdp_erasure"], GDPR: ["gdpr_erasure"], CCPA: ["ccpa_deletion"], SOC2: ["soc2_disposal"] },
         fix: `Add a delete-account / delete-my-data handler that removes the user's rows from ${f.table}.` });
     }
     if (f.kind === "no_ttl" && !signals.hasRetentionJob) {
       out.push({ id: `no_ttl:${slug(f.table)}`, severity: "medium", title: `${f.table} keeps personal data forever (no TTL or cleanup job)`,
         layer: "code_vs_storage", evidence: [loc],
-        law: { DPDP: [LAW.DPDP_8_7], GDPR: [LAW.GDPR_5_1_E], CCPA: [LAW.CCPA_100_A3] },
-        checklist: { DPDP: ["dpdp_erasure"], GDPR: ["gdpr_retention"], CCPA: ["ccpa_retention"] },
+        law: { DPDP: [LAW.DPDP_8_7], GDPR: [LAW.GDPR_5_1_E], CCPA: [LAW.CCPA_100_A3], SOC2: [LAW.SOC2_P4] },
+        checklist: { DPDP: ["dpdp_erasure"], GDPR: ["gdpr_retention"], CCPA: ["ccpa_retention"], SOC2: ["soc2_disposal"] },
         fix: `Pick a retention period for ${f.table} and enforce it with a scheduled delete (e.g. pg_cron: DELETE FROM ${f.table} WHERE created_at < now() - interval '1 year').` });
     }
   }
@@ -182,15 +204,15 @@ export function runEngine(input: EngineInput): Gap[] {
   for (const f of vectorTables) {
     out.push({ id: `vector_store:${slug(f.table)}`, severity: "high", title: `Embeddings of user text in ${f.table} are personal data but aren't in the notice or deletion path`,
       layer: "policy_vs_storage", evidence: [{ file: f.file, line: f.line, table: `${f.table}${f.column ? "." + f.column : ""}` }],
-      law: { DPDP: [LAW.DPDP_5, LAW.DPDP_8_7], GDPR: [LAW.GDPR_13, LAW.GDPR_17], CCPA: [LAW.CCPA_105] },
-      checklist: { DPDP: ["dpdp_notice_items", "dpdp_erasure"], GDPR: ["gdpr_categories", "gdpr_erasure"], CCPA: ["ccpa_deletion"] },
+      law: { DPDP: [LAW.DPDP_5, LAW.DPDP_8_7], GDPR: [LAW.GDPR_13, LAW.GDPR_17], CCPA: [LAW.CCPA_105], SOC2: [LAW.SOC2_P4] },
+      checklist: { DPDP: ["dpdp_notice_items", "dpdp_erasure"], GDPR: ["gdpr_categories", "gdpr_erasure"], CCPA: ["ccpa_deletion"], SOC2: ["soc2_disposal"] },
       fix: `List "embeddings of your messages" in the notice and delete a user's rows from ${f.table} when they delete their account.` });
   }
   for (const v of vectorVendors) {
     out.push({ id: `vector_store:${v.sdk.id}`, severity: "high", title: `Embeddings of user text stored in ${v.sdk.vendor} need notice and deletion`,
       layer: "policy_vs_storage", evidence: v.findings.slice(0, 1).map(ev),
-      law: { DPDP: [LAW.DPDP_5, LAW.DPDP_8_7], GDPR: [LAW.GDPR_13, LAW.GDPR_17], CCPA: [LAW.CCPA_105] },
-      checklist: { DPDP: ["dpdp_notice_items", "dpdp_erasure"], GDPR: ["gdpr_categories", "gdpr_erasure"], CCPA: ["ccpa_deletion"] },
+      law: { DPDP: [LAW.DPDP_5, LAW.DPDP_8_7], GDPR: [LAW.GDPR_13, LAW.GDPR_17], CCPA: [LAW.CCPA_105], SOC2: [LAW.SOC2_P4] },
+      checklist: { DPDP: ["dpdp_notice_items", "dpdp_erasure"], GDPR: ["gdpr_categories", "gdpr_erasure"], CCPA: ["ccpa_deletion"], SOC2: ["soc2_disposal"] },
       fix: `Delete the user's vectors from ${v.sdk.vendor} (by user id metadata) in your delete-account path, and disclose it.` });
   }
 
@@ -198,7 +220,7 @@ export function runEngine(input: EngineInput): Gap[] {
   if (!signals.consentCaptured && hasPii) {
     out.push({ id: "no_consent_capture", severity: "high", title: "No consent capture found before personal data is processed",
       layer: "policy_vs_code", evidence: [],
-      law: { DPDP: [LAW.DPDP_6], GDPR: [LAW.GDPR_6] }, checklist: { DPDP: ["dpdp_consent"], GDPR: ["gdpr_lawful_basis"] },
+      law: { DPDP: [LAW.DPDP_6], GDPR: [LAW.GDPR_6], SOC2: [LAW.SOC2_P2] }, checklist: { DPDP: ["dpdp_consent"], GDPR: ["gdpr_lawful_basis"], SOC2: ["soc2_consent"] },
       fix: "Show the notice with an unticked consent checkbox at sign-up and store who consented, when, and to which notice version." });
   }
 
@@ -215,13 +237,13 @@ export function runEngine(input: EngineInput): Gap[] {
       out.push({ id: `db_${f.kind}:${slug(f.table)}`, severity: "high",
         title: f.kind === "rls_off" ? `Row-level security is off on ${f.table}` : `${(f.roles ?? []).join(", ") || "Broad roles"} can read ${f.table}${f.column ? "." + f.column : ""}`,
         layer: "storage_access", evidence: [{ table: f.column ? `${f.table}.${f.column}` : f.table, snippet: f.detail }],
-        law: { DPDP: [LAW.DPDP_8_5], GDPR: [LAW.GDPR_32] }, checklist: { DPDP: ["dpdp_security"], GDPR: ["gdpr_security"] },
+        law: { DPDP: [LAW.DPDP_8_5], GDPR: [LAW.GDPR_32], SOC2: [LAW.SOC2_CC6] }, checklist: { DPDP: ["dpdp_security"], GDPR: ["gdpr_security"], SOC2: ["soc2_access_control"] },
         fix: f.kind === "rls_off" ? `ALTER TABLE ${f.table} ENABLE ROW LEVEL SECURITY; then add policies limiting each user to their own rows.` : `REVOKE SELECT ON ${f.table} FROM anon, authenticated, PUBLIC; grant reads only to the roles that need them.` });
     } else if (f.kind === "no_ttl" && !schemaFindings.some((s) => s.kind === "no_ttl" && slug(s.table) === slug(f.table))) {
       out.push({ id: `no_ttl:${slug(f.table)}`, severity: "medium", title: `${f.table} keeps personal data forever (no TTL job in the database)`,
         layer: "storage_access", evidence: [{ table: f.table, snippet: f.detail }],
-        law: { DPDP: [LAW.DPDP_8_7], GDPR: [LAW.GDPR_5_1_E], CCPA: [LAW.CCPA_100_A3] },
-        checklist: { DPDP: ["dpdp_erasure"], GDPR: ["gdpr_retention"], CCPA: ["ccpa_retention"] },
+        law: { DPDP: [LAW.DPDP_8_7], GDPR: [LAW.GDPR_5_1_E], CCPA: [LAW.CCPA_100_A3], SOC2: [LAW.SOC2_P4] },
+        checklist: { DPDP: ["dpdp_erasure"], GDPR: ["gdpr_retention"], CCPA: ["ccpa_retention"], SOC2: ["soc2_disposal"] },
         fix: `Schedule a delete on ${f.table} for rows older than your stated retention period.` });
     } else if (f.kind === "pii_column") {
       // Already disclosed in the policy: the column is personal data, but not a gap.
@@ -232,6 +254,55 @@ export function runEngine(input: EngineInput): Gap[] {
         checklist: { DPDP: ["dpdp_notice_items"], GDPR: ["gdpr_categories"], CCPA: ["ccpa_notice"] },
         fix: `Disclose what ${f.column ?? "this column"} holds in the notice, or stop storing it there.` });
     }
+  }
+
+  // SOC 2 repository controls: committed secrets, personal data in logs, no CI/tests.
+  for (const sec of (signals.secrets ?? []).slice(0, 5)) {
+    out.push({ id: `secret_in_repo:${slug(sec.file)}_${sec.line}`, severity: "high", title: `${sec.kind} committed to the repository`,
+      layer: "repo_hygiene", evidence: [{ file: sec.file, line: sec.line }],
+      law: { SOC2: [LAW.SOC2_CC6], DPDP: [LAW.DPDP_8_5], GDPR: [LAW.GDPR_32] },
+      checklist: { SOC2: ["soc2_secrets"], DPDP: ["dpdp_security"], GDPR: ["gdpr_security"] },
+      fix: "Remove it from the repo (and its git history), rotate the key now, and load it from an environment variable or secrets manager." });
+  }
+  const piiLogs = codeFindings.filter((f) => f.kind === "logging" && f.dataTypes.length);
+  if (piiLogs.length) {
+    out.push({ id: "pii_in_logs", severity: "medium", title: `Personal data written to logs (${[...new Set(piiLogs.flatMap((f) => f.dataTypes))].map(label).join(", ")})`,
+      layer: "repo_hygiene", evidence: piiLogs.slice(0, 3).map(ev),
+      law: { SOC2: [LAW.SOC2_C1, LAW.SOC2_CC7], GDPR: [LAW.GDPR_5_1_C] }, checklist: { SOC2: ["soc2_logging"], GDPR: ["gdpr_minimisation_ai"] },
+      fix: "Log user ids and event names instead of request bodies or user records, and mask emails, phones and tokens." });
+  }
+  if (signals.hasCi === false || signals.hasTests === false) {
+    const missing = [signals.hasCi === false ? "a CI workflow" : "", signals.hasTests === false ? "automated tests" : ""].filter(Boolean).join(" or ");
+    out.push({ id: "no_change_control", severity: "low", title: `No ${missing} found: changes reach production unchecked`,
+      layer: "repo_hygiene", evidence: [], law: { SOC2: [LAW.SOC2_CC8] }, checklist: { SOC2: ["soc2_change_mgmt"] },
+      fix: "Add a CI workflow (e.g. .github/workflows/ci.yml) that runs tests on every pull request, and require it to pass before merging." });
+  }
+
+  // Legal documents vs code: a document promises deletion or a retention period but nothing deletes data.
+  const promises = input.docPromises ?? [];
+  const hasStoredPii = schemaFindings.some((f) => f.kind === "pii_column" || f.kind === "vector_store") || typeEvidence.size > 0;
+  for (const pr of promises.filter((x) => (x.kind === "retention" || x.kind === "deletion") && hasStoredPii && !signals.hasRetentionJob).slice(0, 3)) {
+    out.push({ id: `doc_promise_unenforced:${slug(pr.doc)}`, severity: "high", title: `${pr.doc} promises "${pr.text.slice(0, 90)}" but the code never deletes data`,
+      layer: "policy_vs_storage", evidence: schemaFindings.filter((f) => f.kind === "no_ttl" || f.kind === "no_delete_path").slice(0, 2).map((f) => ({ file: f.file, line: f.line, table: f.table })),
+      law: { DPDP: [LAW.DPDP_8_7], GDPR: [LAW.GDPR_5_1_E], CCPA: [LAW.CCPA_100_A3], SOC2: [LAW.SOC2_C1, LAW.SOC2_P4] },
+      checklist: { DPDP: ["dpdp_erasure"], GDPR: ["gdpr_retention"], CCPA: ["ccpa_retention"], SOC2: ["soc2_disposal", "soc2_documents_consistent"] },
+      fix: `Add a scheduled delete that matches what ${pr.doc} promises, or change the document to what the system really does.` });
+  }
+  for (const pr of promises.filter((x) => x.kind === "no_sharing" && vendors.size > 0).slice(0, 2)) {
+    const names = [...vendors.values()].map((v) => v.sdk.vendor).slice(0, 4).join(", ");
+    out.push({ id: `doc_promise_sharing:${slug(pr.doc)}`, severity: "high", title: `${pr.doc} says data isn't shared, but the code sends it to ${names}`,
+      layer: "policy_vs_code", evidence: [...vendors.values()].flatMap((v) => v.findings.slice(0, 1)).slice(0, 3).map(ev),
+      law: { DPDP: [LAW.DPDP_5, LAW.DPDP_8_2], GDPR: [LAW.GDPR_13_1_E], CCPA: [LAW.CCPA_115], SOC2: [LAW.SOC2_CC2, LAW.SOC2_C1] },
+      checklist: { DPDP: ["dpdp_third_parties"], GDPR: ["gdpr_categories"], CCPA: ["ccpa_third_parties"], SOC2: ["soc2_documents_consistent", "soc2_vendor_mgmt"] },
+      fix: `Name these processors in ${pr.doc} (as subprocessors bound by confidentiality), or stop sending them the data.` });
+  }
+  // Legal documents vs each other (found by the agent when the scan reads all documents together).
+  for (const [i, c] of (input.docConflicts ?? []).slice(0, 6).entries()) {
+    out.push({ id: `doc_conflict:${i}_${slug(c.title).slice(0, 40)}`, severity: c.severity, title: c.title,
+      layer: "doc_vs_doc", evidence: [{ snippet: `${c.docs.join(" vs ")}: ${c.detail}` }],
+      law: { DPDP: [LAW.DPDP_5], GDPR: [LAW.GDPR_13], CCPA: [LAW.CCPA_100], SOC2: [LAW.SOC2_CC2] },
+      checklist: { DPDP: ["dpdp_notice_purposes"], GDPR: ["gdpr_categories"], CCPA: ["ccpa_notice"], SOC2: ["soc2_documents_consistent"] },
+      fix: `Make ${c.docs.join(" and ")} say the same thing, matching what the system actually does.` });
   }
 
   // Keep only selected frameworks; drop gaps that apply to none of them. De-dup by id.

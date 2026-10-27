@@ -39,6 +39,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const interested = user.isPro ? new Set() : await interestedPlans(user.id);
   const notes = await db.select().from(schema.notifications).where(eq(schema.notifications.userId, user.id)).orderBy(desc(schema.notifications.createdAt)).limit(10);
   const unread = notes.filter((n) => !n.readAt).length;
+  const groups = await db.select().from(schema.groups).where(eq(schema.groups.userId, user.id)).orderBy(desc(schema.groups.createdAt)).limit(20);
+  const groupRepos = (gid: string) => projects.filter((p) => p.groupId === gid);
   const ready = scans.filter((s) => s.status === "done").length;
 
   return (
@@ -76,6 +78,23 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               <a className="btn" href="/pricing">See paid plans</a>
             )}
           </aside>
+        )}
+
+        {groups.some((g) => groupRepos(g.id).length > 1) && (
+          <>
+            <h2 className="sec">Company audits</h2>
+            <ul className="notes">
+              {groups.filter((g) => groupRepos(g.id).length > 1).map((g) => (
+                <li key={g.id}>
+                  <div>
+                    <a href={`/groups/${g.id}`}><strong>{g.name}</strong></a>
+                    <p className="muted" style={{ margin: "4px 0 0", fontSize: 13 }}>{groupRepos(g.id).map((p) => p.name).join(", ")}</p>
+                  </div>
+                  <span className="muted" style={{ fontSize: 12, whiteSpace: "nowrap" }}>{groupRepos(g.id).length} repos · {fmt.format(g.createdAt)}</span>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
 
         <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>

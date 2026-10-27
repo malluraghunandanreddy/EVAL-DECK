@@ -36,6 +36,8 @@ export const projects = pgTable("projects", {
   lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
   watch: boolean("watch").notNull().default(true),
   dbEnvHints: text("db_env_hints").array(),
+  // Set when the project was created as part of a multi-repo audit (one group per company or batch).
+  groupId: uuid("group_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
 
@@ -52,6 +54,8 @@ export const scans = pgTable("scans", {
   checklist: jsonb("checklist"),
   coverage: jsonb("coverage"),
   error: text("error"),
+  // Every legal document read for this scan, with what it promises (see lib/scan/documents.ts).
+  documents: jsonb("documents"),
   // Set when this one report was bought (single report plan). Pro monthly unlocks every report instead.
   unlockedAt: timestamp("unlocked_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -115,8 +119,29 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
 
+// A multi-repo audit: several projects created and scanned together (e.g. one company's website, portal and services).
+export const groups = pgTable("groups", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
+
+// Legal documents that cover a project: privacy policy, terms, engagement terms, NDA, DPA. URL or pasted text.
+export const documents = pgTable("documents", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id").notNull(),
+  kind: text("kind").notNull(), // privacy | terms | engagement | nda | dpa | other
+  title: text("title").notNull(),
+  url: text("url"),
+  text: text("text"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
+
 export type User = typeof users.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type Project = typeof projects.$inferSelect;
 export type Scan = typeof scans.$inferSelect;
 export type PolicyVersion = typeof policyVersions.$inferSelect;
+export type Group = typeof groups.$inferSelect;
+export type LegalDocument = typeof documents.$inferSelect;

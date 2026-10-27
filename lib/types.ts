@@ -1,4 +1,4 @@
-export type Framework = "DPDP" | "GDPR" | "CCPA";
+export type Framework = "DPDP" | "GDPR" | "CCPA" | "SOC2";
 export type Market = "IN" | "EU" | "UK" | "US" | "OTHER";
 
 export const MARKET_FRAMEWORK: Record<Market, Framework> = {
@@ -9,11 +9,14 @@ export const MARKET_FRAMEWORK: Record<Market, Framework> = {
   OTHER: "GDPR",
 };
 
-export function frameworksFor(markets: Market[]): Framework[] {
+export const FRAMEWORK_ORDER: Framework[] = ["DPDP", "GDPR", "CCPA", "SOC2"];
+
+/** Laws from the markets, plus SOC 2 when asked for (it is an audit standard, not tied to a market). */
+export function frameworksFor(markets: Market[], opts: { soc2?: boolean } = {}): Framework[] {
   const set = new Set<Framework>(markets.map((m) => MARKET_FRAMEWORK[m]).filter(Boolean));
   if (set.size === 0) set.add("GDPR");
-  const order: Framework[] = ["DPDP", "GDPR", "CCPA"];
-  return order.filter((f) => set.has(f));
+  if (opts.soc2) set.add("SOC2");
+  return FRAMEWORK_ORDER.filter((f) => set.has(f));
 }
 
 export type DataType =
@@ -64,7 +67,7 @@ export type Gap = {
   id: string;
   severity: "high" | "medium" | "low";
   title: string;
-  layer: "policy_vs_code" | "code_vs_storage" | "policy_vs_storage" | "storage_access";
+  layer: "policy_vs_code" | "code_vs_storage" | "policy_vs_storage" | "storage_access" | "doc_vs_doc" | "repo_hygiene";
   frameworks: Framework[];
   evidence: { file?: string; line?: number; snippet?: string; table?: string }[];
   law: LawRef[];

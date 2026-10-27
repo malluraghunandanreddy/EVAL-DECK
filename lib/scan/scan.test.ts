@@ -87,3 +87,29 @@ test("name classification", () => {
   assert.deepEqual(classifyName("name", "column", "users"), ["name"]);
   assert.deepEqual(classifyName("aadhaar_no"), ["aadhaar"]);
 });
+
+test("SOC 2: checklist, repo controls and document promises", async () => {
+  const r = await analyzeDirectory(FIXTURE, { frameworks: ["DPDP", "SOC2"] });
+  const soc2 = r.checklist.filter((i) => i.framework === "SOC2");
+  assert.ok(soc2.length >= 10, `SOC 2 checklist has ${soc2.length} items`);
+  assert.ok(soc2.some((i) => i.id === "soc2_vendor_mgmt" && i.status === "todo"), "vendor management flagged (PostHog/OpenAI undisclosed)");
+  assert.ok(soc2.some((i) => i.id === "soc2_disposal" && i.status === "todo"), "disposal flagged (no TTL)");
+  for (const g of r.gaps) assert.ok(g.frameworks.every((f) => f === "DPDP" || f === "SOC2"), `gap ${g.id} only uses selected frameworks`);
+
+  // DPDP-only scans never show SOC 2-only gaps such as change control.
+  const dpdpOnly = await analyzeDirectory(FIXTURE, { frameworks: ["DPDP"] });
+  assert.ok(!dpdpOnly.gaps.some((g) => g.id === "no_change_control"), "no SOC 2-only gap without SOC 2");
+
+  const { engineFromFindings } = await import("./evaluate");
+  const withDocs = engineFromFindings({
+    frameworks: ["SOC2", "GDPR"], codeFindings: r.codeFindings, schemaFindings: r.schemaFindings, claims: r.policyClaims, signals: r.signals,
+    coverage: r.coverage,
+    docPromises: [{ doc: "Engagement terms", kind: "deletion", text: "client data is deleted within 30 days of the engagement ending" },
+      { doc: "NDA", kind: "no_sharing", text: "we will not disclose confidential information to any third party" }],
+    docConflicts: [{ title: "Privacy policy keeps data 12 months but the NDA says 30 days", docs: ["Privacy policy", "NDA"], detail: "12 months vs 30 days", severity: "medium" }],
+  });
+  assert.ok(withDocs.gaps.some((g) => g.id.startsWith("doc_promise_unenforced:engagement_terms")), "deletion promise checked against code");
+  assert.ok(withDocs.gaps.some((g) => g.id.startsWith("doc_promise_sharing:nda")), "no-sharing promise checked against vendors");
+  assert.ok(withDocs.gaps.some((g) => g.layer === "doc_vs_doc"), "document conflict becomes a gap");
+  assert.ok(withDocs.checklist.some((i) => i.id === "soc2_documents_consistent" && i.status === "todo"), "SOC 2 documents item flagged");
+});

@@ -58,6 +58,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     isPro,
     plan,
     project: {
+      groupId: project.groupId,
       id: project.id,
       name: project.name,
       markets: project.markets,
@@ -78,6 +79,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     dbFindings: scan.dbFindings,
     gaps: isPro ? gaps : stripFixes(gaps),
     checklist: isPro ? checklist : stripFixes(checklist),
+    documents: scan.documents ?? null,
     disclaimer: "Not legal advice.",
   }, { headers: { "Cache-Control": "no-store" } });
 }

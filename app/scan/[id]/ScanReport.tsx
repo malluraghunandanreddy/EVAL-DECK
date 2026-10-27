@@ -149,6 +149,7 @@ export default function ScanReport({ scanId }: { scanId: string }) {
       )}
       <Checklist scan={scan} />
       <Layers scan={scan} />
+      <Documents scan={scan} />
       <Gaps scan={scan} />
       <PolicyPanel scan={scan} reload={load} toast={toast.show} />
       <Extras scan={scan} />
@@ -160,6 +161,58 @@ export default function ScanReport({ scanId }: { scanId: string }) {
   );
 }
 
+/* ---------- legal documents ---------- */
+
+const DOC_KIND: Record<string, string> = {
+  privacy: "Privacy policy", terms: "Terms and conditions", engagement: "Engagement terms", nda: "NDA", dpa: "Data processing agreement", other: "Document",
+};
+const PROMISE_KIND: Record<string, string> = {
+  retention: "Retention", deletion: "Deletion", sharing: "Shared with", no_sharing: "No sharing", confidentiality: "Confidentiality", storage_location: "Storage location",
+};
+
+function Documents({ scan }: { scan: ScanResponse }) {
+  const docs = scan.documents?.list ?? [];
+  if (!docs.length) return null;
+  const conflicts = scan.documents?.conflicts ?? [];
+  return (
+    <section className="rp-section">
+      <div className="rp-section-head">
+        <h2>Legal documents checked</h2>
+        <span className="muted" style={{ fontSize: 13 }}>{docs.filter((d) => d.read).length} of {docs.length} read{conflicts.length ? ` · ${conflicts.length} disagree` : ""}</span>
+      </div>
+      <div className="rp-cards">
+        {docs.map((d) => (
+          <div key={d.id} className="panel">
+            <h3 style={{ marginBottom: 2 }}>{d.title}</h3>
+            <div className="muted" style={{ fontSize: 12 }}>{DOC_KIND[d.kind] ?? d.kind}{d.url ? <> · <a href={d.url} target="_blank" rel="noreferrer">open</a></> : " · pasted text"}</div>
+            {!d.read ? (
+              <p style={{ color: "var(--bad)", fontSize: 13, marginBottom: 0 }}>Could not read this document. Check the link opens without signing in.</p>
+            ) : d.promises.length === 0 ? (
+              <p className="muted" style={{ fontSize: 13, marginBottom: 0 }}>No data promises found.</p>
+            ) : (
+              <ul className="rp-findings">
+                {d.promises.slice(0, 6).map((p, i) => (
+                  <li key={i}><span className="rp-tag">{PROMISE_KIND[p.kind] ?? p.kind}</span> {p.text}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ))}
+      </div>
+      {conflicts.length > 0 && (
+        <ul className="rp-list" style={{ marginTop: 12 }}>
+          {conflicts.map((c, i) => (
+            <li key={i} className="rp-item todo">
+              <div className="rp-item-title"><span className={`rp-chip ${c.severity}`}>{c.severity}</span> {c.title}</div>
+              <div className="rp-item-sub">{c.docs.join(" vs ")}: {c.detail}</div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 /* ---------- header / progress / summary ---------- */
 
 function Header({ scan, onShare }: { scan: ScanResponse; onShare: (() => void) | null }) {
@@ -168,7 +221,7 @@ function Header({ scan, onShare }: { scan: ScanResponse; onShare: (() => void) |
   return (
     <div className="rp-header">
       <div>
-        <div className="eyebrow">Privacy report</div>
+        <div className="eyebrow">Privacy report{p?.groupId && <> · <a href={`/groups/${p.groupId}`}>Company audit</a></>}</div>
         <h1>{p?.name ?? "Your app"}</h1>
         <div className="rp-meta">
           {p?.repoFullName && <span className="rp-pill">⎇ {p.repoFullName}</span>}

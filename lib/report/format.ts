@@ -24,6 +24,7 @@ export type ScanResponse = {
     frameworks: Framework[] | null;
     markets: string[] | null;
     repoFullName: string | null;
+    groupId?: string | null;
   } | null;
   isPro: boolean;
   plan?: "free" | "single" | "monthly";
@@ -36,16 +37,22 @@ export type ScanResponse = {
   coverage: Coverage | null;
   dbEnvHints?: string[] | null;
   policyVersion?: { status: PolicyVersionStatus; reviewerNote: string | null; siteId: string | null } | null;
+  documents?: {
+    list: { id: string; kind: string; title: string; url: string | null; read: boolean; promises: { kind: string; text: string }[] }[];
+    conflicts: { title: string; docs: string[]; detail: string; severity: "high" | "medium" | "low" }[];
+  } | null;
 };
 
 export type PolicyPreview = { sections: { title: string; md: string }[]; locked: boolean; totalSections: number };
 
-export const FRAMEWORK_ORDER: Framework[] = ["DPDP", "GDPR", "CCPA"];
+export { FRAMEWORK_ORDER } from "../types";
+import { FRAMEWORK_ORDER } from "../types";
 
 export const FRAMEWORK_LABEL: Record<Framework, string> = {
   DPDP: "DPDP (India)",
   GDPR: "GDPR (EU/UK)",
   CCPA: "CCPA (US)",
+  SOC2: "SOC 2 (Trust Services)",
 };
 
 export const STATUS_META: Record<ChecklistStatus, { icon: string; label: string }> = {
@@ -64,6 +71,8 @@ export const LAYER_LABEL: Record<Gap["layer"], string> = {
   code_vs_storage: "Code vs storage",
   policy_vs_storage: "Policy vs storage",
   storage_access: "Storage access",
+  doc_vs_doc: "Document vs document",
+  repo_hygiene: "Repository controls",
 };
 
 export const COVERAGE_NOTE =
